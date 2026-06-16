@@ -1059,9 +1059,16 @@ lm_msr2seg (const MS3Record *msr, nstime_t endtime)
       return NULL;
     }
 
-    datasize = samplesize * msr->numsamples;
+    if (msr->numsamples < 0 || (uint64_t)msr->numsamples > SIZE_MAX / (size_t)samplesize)
+    {
+      ms_log (2, "Data buffer size overflow for %" PRId64 " samples\n", msr->numsamples);
+      lm_free_segment_memory (seg, 0);
+      return NULL;
+    }
 
-    if (!(seg->datasamples = libmseed_memory.malloc ((size_t)(datasize))))
+    datasize = (size_t)msr->numsamples * (size_t)samplesize;
+
+    if (!(seg->datasamples = libmseed_memory.malloc (datasize)))
     {
       ms_log (2, "Error allocating memory\n");
       lm_free_segment_memory (seg, 0);
@@ -1117,24 +1124,37 @@ lm_addmsrtoseg (MS3TraceSeg *seg, const MS3Record *msr, nstime_t endtime, int8_t
       return NULL;
     }
 
-    newdatasize = (seg->numsamples + msr->numsamples) * samplesize;
+    if (seg->numsamples < 0 || msr->numsamples < 0 ||
+        (uint64_t)seg->numsamples + (uint64_t)msr->numsamples > SIZE_MAX / (size_t)samplesize)
+    {
+      ms_log (2, "Data buffer size overflow combining %" PRId64 " and %" PRId64 " samples\n",
+              seg->numsamples, msr->numsamples);
+      return NULL;
+    }
+
+    newdatasize = ((size_t)seg->numsamples + (size_t)msr->numsamples) * (size_t)samplesize;
 
     if (libmseed_prealloc_block_size)
     {
       size_t current_size = seg->datasize;
       newdatasamples = libmseed_memory_prealloc (seg->datasamples, newdatasize, &current_size);
-      seg->datasize = current_size;
+
+      /* Update datasize only on success; on failure the original buffer and its
+       * recorded size are left intact (prealloc/realloc do not free on failure). */
+      if (newdatasamples)
+        seg->datasize = current_size;
     }
     else
     {
       newdatasamples = libmseed_memory.realloc (seg->datasamples, newdatasize);
-      seg->datasize = newdatasize;
+
+      if (newdatasamples)
+        seg->datasize = newdatasize;
     }
 
     if (!newdatasamples)
     {
       ms_log (2, "Error allocating memory\n");
-      seg->datasize = 0;
       return NULL;
     }
 
@@ -1216,24 +1236,37 @@ lm_addsegtoseg (MS3TraceSeg *seg1, MS3TraceSeg *seg2)
       return NULL;
     }
 
-    newdatasize = (seg1->numsamples + seg2->numsamples) * samplesize;
+    if (seg1->numsamples < 0 || seg2->numsamples < 0 ||
+        (uint64_t)seg1->numsamples + (uint64_t)seg2->numsamples > SIZE_MAX / (size_t)samplesize)
+    {
+      ms_log (2, "Data buffer size overflow combining %" PRId64 " and %" PRId64 " samples\n",
+              seg1->numsamples, seg2->numsamples);
+      return NULL;
+    }
+
+    newdatasize = ((size_t)seg1->numsamples + (size_t)seg2->numsamples) * (size_t)samplesize;
 
     if (libmseed_prealloc_block_size)
     {
       size_t current_size = seg1->datasize;
       newdatasamples = libmseed_memory_prealloc (seg1->datasamples, newdatasize, &current_size);
-      seg1->datasize = current_size;
+
+      /* Update datasize only on success; on failure the original buffer and its
+       * recorded size are left intact (prealloc/realloc do not free on failure). */
+      if (newdatasamples)
+        seg1->datasize = current_size;
     }
     else
     {
       newdatasamples = libmseed_memory.realloc (seg1->datasamples, newdatasize);
-      seg1->datasize = newdatasize;
+
+      if (newdatasamples)
+        seg1->datasize = newdatasize;
     }
 
     if (!newdatasamples)
     {
       ms_log (2, "Error allocating memory\n");
-      seg1->datasize = 0;
       return NULL;
     }
 
