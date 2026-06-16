@@ -612,6 +612,8 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
         /* Add MS3RecordPtr if requested */
         if (pprecptr && !(*pprecptr = lm_add_recordptr (seg, msr, endtime, 0)))
         {
+          /* seg is not yet linked into the segment list, free it directly */
+          lm_free_segment_memory (seg, 0);
           return NULL;
         }
 

@@ -1013,7 +1013,11 @@ msr3_writemseed (MS3Record *msr, const char *mspath, int8_t overwrite, uint32_t 
   /* Initialize packer */
   packer = msr3_pack_init (msr, flags, verbose);
   if (!packer)
+  {
+    if (ofp != stdout)
+      fclose (ofp);
     return -1;
+  }
 
   /* Pack the MS3Record */
   while ((result = msr3_pack_next (packer, &record, &reclen)) == 1)

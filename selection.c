@@ -210,6 +210,7 @@ ms3_addselect (MS3Selections **ppselections, const char *sidpattern, nstime_t st
     if (!(newsl = (MS3Selections *)libmseed_memory.malloc (sizeof (MS3Selections))))
     {
       ms_log (2, "Cannot allocate memory\n");
+      libmseed_memory.free (newst);
       return -1;
     }
     memset (newsl, 0, sizeof (MS3Selections));
@@ -251,6 +252,7 @@ ms3_addselect (MS3Selections **ppselections, const char *sidpattern, nstime_t st
       if (!(newsl = (MS3Selections *)libmseed_memory.malloc (sizeof (MS3Selections))))
       {
         ms_log (2, "Cannot allocate memory\n");
+        libmseed_memory.free (newst);
         return -1;
       }
       memset (newsl, 0, sizeof (MS3Selections));
