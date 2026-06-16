@@ -178,7 +178,7 @@ static const int monthdays_leap[] = {31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30,
 
 /* Check that a day-of-month is in a valid range */
 #define VALIDMONTHDAY(year, month, mday) \
-  (mday >= 0 && mday <= (LEAPYEAR (year) ? monthdays_leap[month - 1] : monthdays[month - 1]))
+  (mday >= 1 && mday <= (LEAPYEAR (year) ? monthdays_leap[month - 1] : monthdays[month - 1]))
 
 /* Check that a day-of-year is in a valid range */
 #define VALIDYEARDAY(year, yday) (yday >= 1 && yday <= (365 + (LEAPYEAR (year) ? 1 : 0)))
