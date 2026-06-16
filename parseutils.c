@@ -1359,9 +1359,16 @@ ms_parse_raw2 (const char *record, int maxreclen, int8_t details, int8_t swapfla
 
           /* Crude display of the opaque data headers, hopefully printable */
           if (details > 1)
-            ms_log (0, "                     headers: %.*s\n",
-                    (HO2u (*pMS2B2000_DATAOFFSET (record + blkt_offset), swapflag) - 15),
-                    pMS2B2000_PAYLOAD (record + blkt_offset));
+          {
+            int b2000_dataoffset = HO2u (*pMS2B2000_DATAOFFSET (record + blkt_offset), swapflag);
+
+            /* Headers occupy bytes 15..DATAOFFSET; validate the offset is
+             * within the blockette before using it as a print length */
+            if (b2000_dataoffset >= 15 && b2000_dataoffset <= blkt_length)
+              ms_log (0, "                     headers: %.*s\n",
+                      (b2000_dataoffset - 15),
+                      pMS2B2000_PAYLOAD (record + blkt_offset));
+          }
         }
       }
 
