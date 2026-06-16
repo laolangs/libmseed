@@ -1326,9 +1326,10 @@ ms_decode_data (const void *input, uint64_t inputsize, uint8_t encoding, uint64_
                 void *output, uint64_t outputsize, char *sampletype, int8_t swapflag,
                 const char *sid, int8_t verbose)
 {
-  uint64_t decodedsize;   /* byte size of decodeded samples */
-  int64_t nsamples;       /* number of samples unpacked */
-  uint8_t samplesize = 0; /* size of the data samples in bytes */
+  uint64_t decodedsize;         /* byte size of decodeded samples */
+  int64_t nsamples;             /* number of samples unpacked */
+  uint8_t samplesize = 0;       /* size of the decoded data samples in bytes */
+  uint8_t inputsamplebytes = 0; /* size of an encoded input sample in bytes */
 
   if (!input || !output || !sampletype)
   {
@@ -1351,6 +1352,50 @@ ms_decode_data (const void *input, uint64_t inputsize, uint8_t encoding, uint64_
             "%s: Output buffer (%" PRIu64 " bytes) is not large enought for decoded data (%" PRIu64
             " bytes)\n",
             (sid) ? sid : "", decodedsize, outputsize);
+    return MS_GENERROR;
+  }
+
+  /* For encodings with a fixed number of input bytes per sample, verify that
+   * the input buffer is large enough to hold 'samplecount' encoded samples.
+   * This guards against a header that claims more samples than the encoded
+   * payload contains, which would otherwise over-read the input buffer.
+   * The Steim encodings perform their own input-length bounding (via the
+   * 'inputsize' argument) and so use an input sample size of zero here. */
+  switch (encoding)
+  {
+  case DE_TEXT:
+    inputsamplebytes = 1;
+    break;
+  case DE_INT16:
+  case DE_GEOSCOPE163:
+  case DE_GEOSCOPE164:
+  case DE_CDSN:
+  case DE_SRO:
+  case DE_DWWSSN:
+    inputsamplebytes = 2;
+    break;
+  case DE_GEOSCOPE24:
+    inputsamplebytes = 3;
+    break;
+  case DE_INT32:
+  case DE_FLOAT32:
+    inputsamplebytes = 4;
+    break;
+  case DE_FLOAT64:
+    inputsamplebytes = 8;
+    break;
+  default:
+    inputsamplebytes = 0;
+    break;
+  }
+
+  /* Compare without overflow: samplecount * inputsamplebytes > inputsize */
+  if (inputsamplebytes && (inputsize / inputsamplebytes) < samplecount)
+  {
+    ms_log (2,
+            "%s: Input buffer (%" PRIu64 " bytes) is not large enough for %" PRIu64
+            " samples of encoding %u\n",
+            (sid) ? sid : "", inputsize, samplecount, encoding);
     return MS_GENERROR;
   }
 
