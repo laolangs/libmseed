@@ -1389,8 +1389,8 @@ lm_add_recordptr (MS3TraceSeg *seg, const MS3Record *msr, nstime_t endtime, int8
  * truncated to integers even if loss of sample precision is detected.
  * If the truncate flag is false (zero) and loss of precision is
  * detected an error is returned.  Loss of precision is determined by
- * testing that the difference between the floating point value and
- * the (truncated) integer value is greater than 0.000001.
+ * testing that the absolute difference between the floating point value
+ * and the (truncated) integer value is greater than 0.000001.
  *
  * @param[in] seg The target ::MS3TraceSeg to convert
  * @param[in] type The desired data sample type:
@@ -1441,10 +1441,10 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
       for (idx = 0; idx < seg->numsamples; idx++)
       {
         /* Check for loss of sub-integer */
-        if (!truncate && (fdata[idx] - (int32_t)fdata[idx]) > 0.000001)
+        if (!truncate && fabs (fdata[idx] - (int32_t)fdata[idx]) > 0.000001)
         {
           ms_log (2, "Loss of precision when converting floats to integers, loss: %g\n",
-                  (fdata[idx] - (int32_t)fdata[idx]));
+                  fabs (fdata[idx] - (int32_t)fdata[idx]));
           return -1;
         }
 
@@ -1457,10 +1457,10 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
       for (idx = 0; idx < seg->numsamples; idx++)
       {
         /* Check for loss of sub-integer */
-        if (!truncate && (ddata[idx] - (int32_t)ddata[idx]) > 0.000001)
+        if (!truncate && fabs (ddata[idx] - (int32_t)ddata[idx]) > 0.000001)
         {
           ms_log (2, "Loss of precision when converting doubles to integers, loss: %g\n",
-                  (ddata[idx] - (int32_t)ddata[idx]));
+                  fabs (ddata[idx] - (int32_t)ddata[idx]));
           return -1;
         }
 
