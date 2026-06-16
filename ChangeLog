@@ -6,6 +6,7 @@
   - Fix out-of-bounds access on long or failed log messages.
   - Fix out-of-bounds read in v2 blockette chain traversal.
   - Fix out-of-bounds write truncating long path with byte range suffix.
+  - Fix NULL dereference in msio_fopen() byte range handling.
   - Use libmseed_memory.free for log registry entries.
   - Fix data size truncation for large fixed-length-encoded records.
   - Fix integer overflow computing v3 record length in ms3_detect().

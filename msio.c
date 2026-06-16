@@ -318,11 +318,11 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
 
       /* Build Range header value.
        * If start is undefined set it to zero if end is defined. */
-      if (*startoffset > 0)
+      if (startoffset && *startoffset > 0)
         snprintf (startstr, sizeof (startstr), "%" PRId64, *startoffset);
-      else if (*endoffset > 0)
+      else if (endoffset && *endoffset > 0)
         snprintf (startstr, sizeof (startstr), "0");
-      if (*endoffset > 0)
+      if (endoffset && *endoffset > 0)
         snprintf (endstr, sizeof (endstr), "%" PRId64, *endoffset);
 
       snprintf (rangestr, sizeof (rangestr), "%s-%s", startstr, endstr);
