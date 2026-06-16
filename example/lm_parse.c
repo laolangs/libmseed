@@ -29,14 +29,13 @@
 #define PACKAGE "lm_parse"
 #define VERSION "[libmseed " LIBMSEED_VERSION " " PACKAGE " ]"
 
-static flag verbose      = 0;
-static flag ppackets     = 0;
-static flag basicsum     = 0;
-static flag tracegap     = 0;
-static flag splitversion = 0;
+static int8_t verbose    = 0;
+static int8_t ppackets   = 0;
+static int8_t basicsum   = 0;
+static int8_t tracegap   = 0;
+static int8_t splitversion = 0;
 static int printraw      = 0;
 static int printdata     = 0;
-static int reclen        = -1;
 static char *inputfile   = NULL;
 
 static int parameter_proc (int argcount, char **argvec);
@@ -240,10 +239,6 @@ parameter_proc (int argcount, char **argvec)
     {
       basicsum = 1;
     }
-    else if (strcmp (argvec[optind], "-r") == 0)
-    {
-      reclen = atoi (argvec[++optind]);
-    }
     else if (strncmp (argvec[optind], "-", 1) == 0 &&
              strlen (argvec[optind]) > 1)
     {
@@ -302,7 +297,6 @@ usage (void)
            " -P             Additionally group traces by data publication version\n"
            " -tg            Print trace listing with gap information\n"
            " -s             Print a basic summary after processing a file\n"
-           " -r bytes       Specify record length in bytes, required if no Blockette 1000\n"
            "\n"
            " file           File of miniSEED records\n"
            "\n");

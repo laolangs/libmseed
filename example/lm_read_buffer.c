@@ -55,6 +55,11 @@ main (int argc, char **argv)
     ms_log (2, "Error stating %s: %s\n", argv[1], strerror (errno));
     return -1;
   }
+  if (sb.st_size == 0)
+  {
+    ms_log (2, "Input file is empty\n");
+    return -1;
+  }
   if (!(buffer = (char *)malloc (sb.st_size)))
   {
     ms_log (2, "Error allocating buffer of %" PRIsize_t " bytes\n",

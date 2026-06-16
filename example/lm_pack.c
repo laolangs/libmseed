@@ -29,7 +29,7 @@
 #define VERSION "[libmseed " LIBMSEED_VERSION " example]"
 #define PACKAGE "lm_pack"
 
-static flag verbose       = 0;
+static int8_t verbose     = 0;
 static int reclen         = -1;
 static double samprate    = 1.0;
 static char *sourceid     = "FDSN:XX_TEST__X_Y_Z";
