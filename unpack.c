@@ -448,7 +448,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
   /* Traverse the blockettes */
   blkt_offset = HO2u (*pMS2FSDH_BLOCKETTEOFFSET (record), msr->swapflag);
 
-  while ((blkt_offset != 0) && (blkt_offset < reclen) && (blkt_offset < MAXRECLEN))
+  while ((blkt_offset != 0) && ((blkt_offset + 4) <= reclen) && (blkt_offset < MAXRECLEN))
   {
     /* Every blockette has a similar 4 byte header: type and next */
     memcpy (&blkt_type, record + blkt_offset, 2);
@@ -458,6 +458,14 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
     {
       ms_gswap2 (&blkt_type);
       ms_gswap2 (&next_blkt);
+    }
+
+    /* Blockette 2000 stores its length in a 2-byte field at offset 4, which
+     * must be within the record buffer before ms2_blktlen() reads it */
+    if (blkt_type == 2000 && (blkt_offset + 6) > reclen)
+    {
+      ms_log (2, "%s: Blockette 2000 length field extends beyond record size, truncated?\n", msr->sid);
+      break;
     }
 
     /* Get blockette length */
