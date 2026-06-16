@@ -667,7 +667,7 @@ utf8length_int (const char *str, int maxlength)
   int length = 0;
   int offset;
 
-  for (offset = 0; str[offset] && offset < maxlength; offset++)
+  for (offset = 0; offset < maxlength && str[offset]; offset++)
   {
     type = utf8d[(uint8_t)str[offset]];
     state = utf8d[256 + state * 16 + type];
