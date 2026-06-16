@@ -663,10 +663,10 @@ msr3_repack_mseed3 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
     return -1;
   }
 
-  if (recbuflen < (uint32_t)(MS3FSDH_LENGTH + msr->extralength + origdatasize))
+  if (recbuflen < ((uint32_t)dataoffset + origdatasize))
   {
-    ms_log (2, "%s: Destination record buffer length (%u) is not large enough for record (%d)\n",
-            msr->sid, recbuflen, (MS3FSDH_LENGTH + msr->extralength + origdatasize));
+    ms_log (2, "%s: Destination record buffer length (%u) is not large enough for record (%u)\n",
+            msr->sid, recbuflen, ((uint32_t)dataoffset + origdatasize));
     return -1;
   }
 
