@@ -616,7 +616,9 @@ mseh_set_ptr_r (MS3Record *msr, const char *ptr, void *value, char type,
   /* Serialized extra headers and free parse state if not being retained */
   if (parsestate == NULL)
   {
-    mseh_serialize (msr, &parsed);
+    /* Only serialize back into the record if the modification succeeded */
+    if (rv == true && mseh_serialize (msr, &parsed) < 0)
+      rv = false;
     mseh_free_parsestate (&parsed);
   }
   /* If changes were applied, the immutable form of the document is now invalid */

@@ -18,6 +18,7 @@
   - Fix resource leaks on msio_fopen() error paths.
   - Fix lookup for v2 Blockette lengths for uncommon blockettes for bounds checks.
   - Validate input payload size against sample count in ms_decode_data().
+  - Propagate extra-header serialization failures in mseh_set_ptr_r().
   - Fix size_t underflow in ms_sid2nslc_n() on zero-size buffers.
   - Limit samples per record to 16-bit limit when packing miniSEED 2.
   - Accept value 255 for B201 MEDLookback and MEDPickAlgorithm.
