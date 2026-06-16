@@ -1376,11 +1376,15 @@ mseh_print (const MS3Record *msr, int indent)
       else if (extra[idx] == '}')
       {
         indent -= 2;
+        if (indent < 0)
+          indent = 0;
         ms_log (0, "\n%*s}", indent, "");
       }
       else if (extra[idx] == ']')
       {
         indent -= 2;
+        if (indent < 0)
+          indent = 0;
         ms_log (0, "\n%*s]", indent, "");
       }
       else

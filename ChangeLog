@@ -26,6 +26,7 @@
   - Fix memory leaks on error paths in extraheaders.c and tracelist.c.
   - Pass unsigned char to ctype functions.
   - Fix buffer overflow in msr3_repack_mseed3() from undersized buffer check.
+  - Limit indent in mseh_print() to avoid negative field width.
   - Build: force "lib" prefix on Windows CMake library output for consistency.
   - Fix tutorial example code, thanks to P. Schmidt for reporting.
 
