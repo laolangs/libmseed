@@ -316,6 +316,14 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
       packer->maxsamples = packer->maxdatabytes / packer->samplesize;
     }
 
+    /* The miniSEED 2 FSDH sample count is a 16-bit field, so a single
+     * record cannot represent more than UINT16_MAX samples regardless of
+     * the record length. */
+    if (packer->formatversion == 2 && packer->maxsamples > UINT16_MAX)
+    {
+      packer->maxsamples = UINT16_MAX;
+    }
+
     /* Allocate space for encoded data separately for alignment */
     packer->encoded = (char *)libmseed_memory.malloc (packer->maxdatabytes);
     if (!packer->encoded)
