@@ -328,7 +328,7 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
 
   /* If splitversion is true and MSF_SPLITISVERSION is set in flags, use splitversion
    * as the version, otherwise use msr->pubversion */
-  int8_t pubversion = (flags & MSF_SPLITISVERSION) ? splitversion : msr->pubversion;
+  uint8_t pubversion = (flags & MSF_SPLITISVERSION) ? splitversion : msr->pubversion;
 
   /* Search for matching trace ID */
   id = mstl3_findID (mstl, msr->sid, (splitversion) ? pubversion : 0, previd);
