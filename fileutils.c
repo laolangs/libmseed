@@ -300,7 +300,14 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
     /* Truncate to remove byte range suffix if present or maximum range */
     if (pathname_range)
     {
-      msfp->path[pathname_range - mspath] = '\0';
+      size_t rangeidx = (size_t)(pathname_range - mspath);
+
+      /* pathname_range points into the original mspath, which may be longer
+       * than the path buffer; clamp the index to stay within bounds */
+      if (rangeidx >= sizeof (msfp->path))
+        rangeidx = sizeof (msfp->path) - 1;
+
+      msfp->path[rangeidx] = '\0';
     }
     else
     {
