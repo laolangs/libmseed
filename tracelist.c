@@ -2942,6 +2942,7 @@ mstl3_printsynclist (const MS3TraceList *mstl, const char *dccid, ms_subseconds_
   char loc[11] = {0};
   char chan[11] = {0};
   time_t now;
+  struct tm now_tm;
   struct tm *nt;
 
   if (!mstl)
@@ -2952,9 +2953,17 @@ mstl3_printsynclist (const MS3TraceList *mstl, const char *dccid, ms_subseconds_
   /* Generate current time stamp */
   now = time (NULL);
   nt = localtime (&now);
-  nt->tm_year += 1900;
-  nt->tm_yday += 1;
-  snprintf (yearday, sizeof (yearday), "%04d,%03d", nt->tm_year, nt->tm_yday);
+  if (nt == NULL)
+  {
+    ms_log (2, "Error converting current time to local time\n");
+    return;
+  }
+
+  /* Copy out of localtime()'s shared static buffer before modifying */
+  now_tm = *nt;
+  now_tm.tm_year += 1900;
+  now_tm.tm_yday += 1;
+  snprintf (yearday, sizeof (yearday), "%04d,%03d", now_tm.tm_year, now_tm.tm_yday);
 
   /* Print SYNC header line */
   ms_log (0, "%s|%s\n", (dccid) ? dccid : "DCC", yearday);
