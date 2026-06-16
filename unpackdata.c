@@ -911,8 +911,10 @@ msr_decode_sro (int16_t *input, uint64_t samplecount, int32_t *output, uint64_t 
       return MS_GENERROR;
     }
 
-    /* Calculate sample as mantissa * 2^exponent */
-    sample = mantissa * ((uint64_t)1 << exponent);
+    /* Calculate sample as mantissa * 2^exponent.  Use signed arithmetic so a
+     * negative mantissa is scaled correctly; exponent is bounded to 0..10
+     * above, so (1 << exponent) and the product are well within int64_t. */
+    sample = (int32_t)(mantissa * (int64_t)(1 << exponent));
 
     /* Save sample in output array */
     output[idx] = sample;
