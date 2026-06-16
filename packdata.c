@@ -395,9 +395,11 @@ msr_encode_steim1 (int32_t *input, uint64_t samplecount, int32_t *output, uint64
 
   /* Set Xn (reverse integration constant) in first frame to last sample */
   if (Xnp)
+  {
     *Xnp = *(input + outputsamples - 1);
-  if (swapflag)
-    ms_gswap4 (Xnp);
+    if (swapflag)
+      ms_gswap4 (Xnp);
+  }
 
   if (byteswritten)
     *byteswritten = (uint32_t)(frameidx * 64);
@@ -702,9 +704,11 @@ msr_encode_steim2 (int32_t *input, uint64_t samplecount, int32_t *output, uint64
 
   /* Set Xn (reverse integration constant) in first frame to last sample */
   if (Xnp)
+  {
     *Xnp = *(input + outputsamples - 1);
-  if (swapflag)
-    ms_gswap4 (Xnp);
+    if (swapflag)
+      ms_gswap4 (Xnp);
+  }
 
   if (byteswritten)
     *byteswritten = (uint32_t)(frameidx * 64);
