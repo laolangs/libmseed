@@ -24,8 +24,8 @@
 #include <string.h>
 #include <time.h>
 
-#include "libmseed.h"
 #include "internalstate.h"
+#include "libmseed.h"
 
 static MS3TraceSeg *lm_msr2seg (const MS3Record *msr, nstime_t endtime);
 static MS3TraceSeg *lm_addmsrtoseg (MS3TraceSeg *seg, const MS3Record *msr, nstime_t endtime,
@@ -1473,8 +1473,8 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
       /* Reallocate buffer for reduced size needed, only if not pre-allocating */
       if (libmseed_prealloc_block_size == 0)
       {
-        void *resized = libmseed_memory.realloc (
-            seg->datasamples, (size_t)(seg->numsamples * sizeof (int32_t)));
+        void *resized = libmseed_memory.realloc (seg->datasamples,
+                                                 (size_t)(seg->numsamples * sizeof (int32_t)));
         if (resized == NULL)
         {
           ms_log (2, "Cannot re-allocate buffer for sample conversion\n");
@@ -1504,8 +1504,8 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
       /* Reallocate buffer for reduced size needed, only if not pre-allocating */
       if (libmseed_prealloc_block_size == 0)
       {
-        void *resized = libmseed_memory.realloc (
-            seg->datasamples, (size_t)(seg->numsamples * sizeof (float)));
+        void *resized =
+            libmseed_memory.realloc (seg->datasamples, (size_t)(seg->numsamples * sizeof (float)));
         if (resized == NULL)
         {
           ms_log (2, "Cannot re-allocate buffer after sample conversion\n");
@@ -2140,8 +2140,8 @@ mstl3_pack_ppupdate_flushidle (MS3TraceList *mstl, void (*record_handler) (char 
  * @see mstl3_pack_free()
  ***************************************************************************/
 MS3TraceListPacker *
-mstl3_pack_init (MS3TraceList *mstl, int reclen, int8_t encoding,
-                 uint32_t flags, int8_t verbose, char *extra, uint32_t flush_idle_seconds)
+mstl3_pack_init (MS3TraceList *mstl, int reclen, int8_t encoding, uint32_t flags, int8_t verbose,
+                 char *extra, uint32_t flush_idle_seconds)
 {
   MS3TraceListPacker *packer = NULL;
 
@@ -2250,8 +2250,8 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       packer->totalpackedsamples += seg_total_packed;
 
       if (packer->verbose > 1 && packer->current_id)
-        ms_log (0, "%s: Packed %" PRId64 " samples from segment\n",
-                packer->current_id->sid, seg_total_packed);
+        ms_log (0, "%s: Packed %" PRId64 " samples from segment\n", packer->current_id->sid,
+                seg_total_packed);
 
       /* If MSF_MAINTAINMSTL not set, update segment data buffer: remove packed samples */
       if ((packer->flags & MSF_MAINTAINMSTL) == 0 && seg_total_packed > 0 && packer->current_seg)
@@ -2286,8 +2286,7 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
           /* Reallocate buffer for reduced size if not pre-allocating */
           if (libmseed_prealloc_block_size == 0)
           {
-            void *resized =
-                libmseed_memory.realloc (packer->current_seg->datasamples, bufsize);
+            void *resized = libmseed_memory.realloc (packer->current_seg->datasamples, bufsize);
 
             if (resized == NULL)
             {
@@ -2398,8 +2397,8 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
           segment_flags |= MSF_FLUSHDATA;
 
           if (packer->verbose >= 2)
-            ms_log (0, "%s: Flushing idle segment (idle for %.1f seconds)\n",
-                    id->sid, (double)update_latency / NSTMODULUS);
+            ms_log (0, "%s: Flushing idle segment (idle for %.1f seconds)\n", id->sid,
+                    (double)update_latency / NSTMODULUS);
         }
       }
 
@@ -2450,7 +2449,8 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       }
 
       /* Create segment packing state */
-      packer->seg_packing_state = msr3_pack_init (&packer->msr_template, segment_flags, packer->verbose);
+      packer->seg_packing_state =
+          msr3_pack_init (&packer->msr_template, segment_flags, packer->verbose);
 
       if (!packer->seg_packing_state)
       {
