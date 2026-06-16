@@ -88,25 +88,27 @@ ms3_matchselect (const MS3Selections *selections, const char *sid, nstime_t star
         findst = findsl->timewindows;
         while (findst)
         {
-          if (starttime != NSTERROR && starttime != NSTUNSET && findst->starttime != NSTERROR &&
-              findst->starttime != NSTUNSET &&
-              (starttime < findst->starttime &&
-               !(starttime <= findst->starttime && endtime >= findst->starttime)))
+          /* Treat unset/error bounds as open-ended: -infinity for start bounds
+           * and +infinity for end bounds.  The query window [qstart, qend]
+           * matches the selection window [sstart, send] when the two windows
+           * intersect: qstart <= send && qend >= sstart (inclusive). */
+          nstime_t qstart =
+              (starttime == NSTERROR || starttime == NSTUNSET) ? INT64_MIN : starttime;
+          nstime_t qend = (endtime == NSTERROR || endtime == NSTUNSET) ? INT64_MAX : endtime;
+          nstime_t sstart = (findst->starttime == NSTERROR || findst->starttime == NSTUNSET)
+                                ? INT64_MIN
+                                : findst->starttime;
+          nstime_t send = (findst->endtime == NSTERROR || findst->endtime == NSTUNSET)
+                              ? INT64_MAX
+                              : findst->endtime;
+
+          if (qstart <= send && qend >= sstart)
           {
-            findst = findst->next;
-            continue;
-          }
-          else if (endtime != NSTERROR && endtime != NSTUNSET && findst->endtime != NSTERROR &&
-                   findst->endtime != NSTUNSET &&
-                   (endtime > findst->endtime &&
-                    !(starttime <= findst->endtime && endtime >= findst->endtime)))
-          {
-            findst = findst->next;
-            continue;
+            matchst = findst;
+            break;
           }
 
-          matchst = findst;
-          break;
+          findst = findst->next;
         }
       }
 
