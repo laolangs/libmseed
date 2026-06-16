@@ -386,13 +386,23 @@ rlog_int (MSLogParam *logp, const char *function, int level, const char *format,
     message[MAX_LOG_MSG_LENGTH - 1] = '\0';
   }
 
-  printed += presize;
+  /* vsnprintf() returns a negative value on error, or the number of
+   * characters that *would* have been written if the buffer were large
+   * enough.  Clamp to the actual, NUL-terminated content length so the
+   * value is never negative and never indexes past the buffer. */
+  if (printed < 0)
+    printed = presize;
+  else
+    printed += presize;
+
+  if (printed > MAX_LOG_MSG_LENGTH - 1)
+    printed = MAX_LOG_MSG_LENGTH - 1;
 
   /* Add warning/error message to registry if enabled */
   if (level >= 1 && logp->registry.maxmessages > 0)
   {
     /* Remove trailing newline if present */
-    if (message[printed - 1] == '\n')
+    if (printed > 0 && message[printed - 1] == '\n')
     {
       message[printed - 1] = '\0';
       printed -= 1;
