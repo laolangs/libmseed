@@ -3027,7 +3027,7 @@ mstl3_printgaplist (const MS3TraceList *mstl, ms_timeformat_t timeformat, double
   while (id)
   {
     seg = id->first;
-    while (seg->next)
+    while (seg && seg->next)
     {
       /* Skip segments with no time coverage, usually from SOH records */
       if (!SEGMENT_HAS_TIME_COVERAGE (seg))
