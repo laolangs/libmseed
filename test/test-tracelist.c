@@ -277,3 +277,82 @@ TEST (tracelist, ms3_readtracelist_splitisversion)
 
   mstl3_free (&mstl, 1);
 }
+
+/* Build a trace list from two time-contiguous, header-only records for the same
+ * source whose sample rates are specified as parameters and return the resulting number
+ * of segments. */
+static int
+addmsr_two_rates (const MS3Tolerance *tolerance, double samprate1, double samprate2)
+{
+  MS3TraceList *mstl = NULL;
+  MS3Record msr = MS3Record_INITIALIZER;
+  nstime_t endtime1;
+  int numsegments;
+
+  if (!(mstl = mstl3_init (NULL)))
+    return -1;
+
+  strcpy (msr.sid, "FDSN:XX_TEST__X_H_Z");
+  msr.formatversion = 3;
+  msr.pubversion = 1;
+  msr.sampletype = 'i';
+  msr.samplecnt = 100;
+  msr.numsamples = 0; /* Header-only, no decoded samples needed for merge logic */
+  msr.datasamples = NULL;
+
+  /* Record 1 at samprate1 */
+  msr.starttime = ms_timestr2nstime ("2024-01-01T00:00:00.0Z");
+  msr.samprate = samprate1;
+  endtime1 = msr3_endtime (&msr);
+
+  if (!mstl3_addmsr (mstl, &msr, 0, 1, 0, tolerance))
+  {
+    mstl3_free (&mstl, 0);
+    return -1;
+  }
+
+  /* Record 2 at samprate2, starting exactly one (record 2) sample period after
+   * record 1 ends, so the records are time-contiguous regardless of rate. */
+  msr.samprate = samprate2;
+  msr.starttime = endtime1 + msr3_nsperiod (&msr);
+
+  if (!mstl3_addmsr (mstl, &msr, 0, 1, 0, tolerance))
+  {
+    mstl3_free (&mstl, 0);
+    return -1;
+  }
+
+  numsegments = (mstl->traces.next[0]) ? (int)mstl->traces.next[0]->numsegments : -1;
+
+  mstl3_free (&mstl, 0);
+  return numsegments;
+}
+
+/* Verify sample rate tolerance handling in mstl3_addmsr() for default tolerance.  Two
+ * time-contiguous records whose sample rates differ beyond the default
+ * tolerance must remain separate segments when the default tolerance is used. */
+TEST (tracelist, mstl3_addmsr_sampratetol_default)
+{
+  CHECK (addmsr_two_rates (NULL, 100.0, 99.5) == 2,
+         "Differing sample rates with default tolerance did not yield 2 segments");
+}
+
+/* A sample rate tolerance callback for mstl3_addmsr() that considers any two
+ * sample rates within 1.0 Hz of each other to be the same. */
+static double
+samprate_tol_generous (const MS3Record *msr)
+{
+  (void)msr;
+  return 1.0;
+}
+
+/* Verify that supplying a custom (generous) sample rate tolerance causes the same
+ * two records to be considered similar and merged into a single segment. */
+TEST (tracelist, mstl3_addmsr_sampratetol_custom)
+{
+  MS3Tolerance tolerance = MS3Tolerance_INITIALIZER;
+  tolerance.samprate = samprate_tol_generous;
+
+  CHECK (addmsr_two_rates (&tolerance, 100.0, 99.5) == 1,
+         "Differing sample rates with generous custom tolerance did not merge into 1 segment");
+}

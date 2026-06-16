@@ -43,7 +43,7 @@ static uint8_t lm_random_height (uint8_t maximum, uint64_t *state);
 /* Test if two sample rates are similar using either specified tolerance (if positive) or default
  * tolerance */
 #define IS_SAMPRATE_SIMILAR(SR1, SR2, SRT) \
-  ((SRT > 0.0) ? fabs (SR1 - SR2) > SRT : MS_ISRATETOLERABLE (SR1, SR2))
+  ((SRT > 0.0) ? fabs (SR1 - SR2) <= SRT : MS_ISRATETOLERABLE (SR1, SR2))
 
 /* Test if a MS3TraceSeg represents time coverage */
 #define SEGMENT_HAS_TIME_COVERAGE(seg) ((seg)->samplecnt > 0 && (seg)->samprate != 0.0)
