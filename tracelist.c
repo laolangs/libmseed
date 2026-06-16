@@ -259,7 +259,7 @@ mstl3_addID (MS3TraceList *mstl, MS3TraceID *id, MS3TraceID **prev)
     id->next[level] = NULL;
   }
 
-  /* Connect previous and new ID pointers */
+  /* Verify all required previous pointers exist before linking anything */
   for (level = id->height - 1; level >= 0; level--)
   {
     if (!prev[level])
@@ -267,7 +267,11 @@ mstl3_addID (MS3TraceList *mstl, MS3TraceID *id, MS3TraceID **prev)
       ms_log (2, "No previous pointer at level %d for adding SID %s\n", level, id->sid);
       return NULL;
     }
+  }
 
+  /* Connect previous and new ID pointers */
+  for (level = id->height - 1; level >= 0; level--)
+  {
     id->next[level] = prev[level]->next[level];
     prev[level]->next[level] = id;
   }
@@ -348,6 +352,7 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
 
     if (!(seg = lm_msr2seg (msr, endtime)))
     {
+      libmseed_memory.free (id);
       return NULL;
     }
     id->first = id->last = seg;
@@ -355,6 +360,8 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
     /* Add MS3RecordPtr if requested */
     if (pprecptr && !(*pprecptr = lm_add_recordptr (seg, msr, endtime, 1)))
     {
+      lm_free_segment_memory (seg, 0);
+      libmseed_memory.free (id);
       return NULL;
     }
 
@@ -362,6 +369,8 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
     if (mstl3_addID (mstl, id, previd) == NULL)
     {
       ms_log (2, "Error adding new ID to trace list\n");
+      lm_free_segment_memory (seg, 0);
+      libmseed_memory.free (id);
       return NULL;
     }
   }
@@ -980,7 +989,10 @@ mstl3_readbuffer_selection (MS3TraceList **ppmstl, const char *buffer, uint64_t 
     {
       /* Determine offset to data and length of data payload */
       if (msr3_data_bounds (msr, &dataoffset, &datasize))
+      {
+        msr3_free (&msr);
         return MS_GENERROR;
+      }
 
       recordptr->bufferptr = buffer + offset;
       recordptr->fileptr = NULL;
@@ -1041,6 +1053,7 @@ lm_msr2seg (const MS3Record *msr, nstime_t endtime)
     if (!(samplesize = ms_samplesize (msr->sampletype)))
     {
       ms_log (2, "Unknown sample size for sample type: %c\n", msr->sampletype);
+      lm_free_segment_memory (seg, 0);
       return NULL;
     }
 
@@ -1049,6 +1062,7 @@ lm_msr2seg (const MS3Record *msr, nstime_t endtime)
     if (!(seg->datasamples = libmseed_memory.malloc ((size_t)(datasize))))
     {
       ms_log (2, "Error allocating memory\n");
+      lm_free_segment_memory (seg, 0);
       return NULL;
     }
     seg->datasize = datasize;

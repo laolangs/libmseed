@@ -64,6 +64,7 @@ parse_json (char *jsonstring, size_t length, LM_PARSED_JSON *parsed)
   yyjson_read_flag flg = YYJSON_READ_NOFLAG;
   yyjson_read_err err;
   yyjson_alc alc = {_priv_malloc, _priv_realloc, _priv_free, NULL};
+  int allocated = 0;
 
   /* Allocate parsed state if needed */
   if (!parsed)
@@ -77,6 +78,7 @@ parse_json (char *jsonstring, size_t length, LM_PARSED_JSON *parsed)
     {
       parsed->doc = NULL;
       parsed->mut_doc = NULL;
+      allocated = 1;
     }
   }
 
@@ -105,6 +107,11 @@ parse_json (char *jsonstring, size_t length, LM_PARSED_JSON *parsed)
   {
     ms_log (2, "%s() Cannot parse extra header JSON: %s\n", __func__,
             (err.msg) ? err.msg : "Unknown error");
+
+    /* Free the parse state only if it was allocated within this call */
+    if (allocated)
+      mseh_free_parsestate (&parsed);
+
     return NULL;
   }
 
