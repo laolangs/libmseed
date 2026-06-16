@@ -126,10 +126,10 @@ header_callback (char *buffer, size_t size, size_t num, void *userdata)
       if (*ptr == ' ' && startdigits == 0)
         continue;
       /* Digits before dash, part of start */
-      else if (isdigit (*ptr) && dash == NULL)
+      else if (isdigit ((unsigned char)*ptr) && dash == NULL)
         startstr[startdigits++] = *ptr;
       /* Digits after dash, part of end */
-      else if (isdigit (*ptr) && dash != NULL)
+      else if (isdigit ((unsigned char)*ptr) && dash != NULL)
         endstr[enddigits++] = *ptr;
       /* If first dash found, store pointer */
       else if (*ptr == '-' && dash == NULL)

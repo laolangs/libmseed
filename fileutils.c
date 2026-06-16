@@ -1148,10 +1148,10 @@ parse_pathname_range (const char *string, int64_t *start, int64_t *end)
     while (*(++ptr) != '\0')
     {
       /* If a digit before dash, part of start */
-      if (isdigit ((int)*ptr) && dash == NULL)
+      if (isdigit ((unsigned char)*ptr) && dash == NULL)
         startstr[startdigits++] = *ptr;
       /* If a digit after dash, part of end */
-      else if (isdigit ((int)*ptr) && dash != NULL)
+      else if (isdigit ((unsigned char)*ptr) && dash != NULL)
         endstr[enddigits++] = *ptr;
       /* If a dash after a dash, not a valid range */
       else if (*ptr == '-' && dash != NULL)

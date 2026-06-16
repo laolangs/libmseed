@@ -483,7 +483,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
       cp++;
     }
     cp--;
-    while (cp >= line && isspace ((int)(*cp)))
+    while (cp >= line && isspace ((unsigned char)(*cp)))
     {
       *cp = '\0';
       cp--;
@@ -491,7 +491,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
 
     /* Trim leading whitespace if any */
     cp = line;
-    while (isspace ((int)(*cp)))
+    while (isspace ((unsigned char)(*cp)))
     {
       line = cp = cp + 1;
     }
@@ -510,7 +510,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     fieldidx = 0;
     while (*cp && fieldidx < MAX_SELECTION_FIELDS)
     {
-      if (!isspace ((int)(*cp)))
+      if (!isspace ((unsigned char)(*cp)))
       {
         /* Field starts at transition from whitespace to non-whitespace */
         if (next == 0)
@@ -750,7 +750,7 @@ ms_isinteger (const char *string)
 {
   while (*string)
   {
-    if (!isdigit ((int)(*string)))
+    if (!isdigit ((unsigned char)(*string)))
       return 0;
     string++;
   }
