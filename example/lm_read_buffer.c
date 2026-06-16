@@ -94,7 +94,7 @@ main (int argc, char **argv)
 
   if (records < 0)
   {
-    ms_log (2, "Problem reading miniSEED from buffer: %s\n", ms_errorstr (records));
+    ms_log (2, "Problem reading miniSEED from buffer: %s\n", ms_errorstr ((int)records));
   }
 
   /* Print summary */
