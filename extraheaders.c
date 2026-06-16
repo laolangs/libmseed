@@ -373,7 +373,7 @@ mseh_get_ptr_r (const MS3Record *msr, const char *ptr, void *value, char type, u
   }
   else if (type == 's' && yyjson_is_str (extravalue))
   {
-    if (value)
+    if (value && maxlength > 0)
     {
       stringvalue = unsafe_yyjson_get_str (extravalue);
       strncpy ((char *)value, stringvalue, maxlength - 1);
