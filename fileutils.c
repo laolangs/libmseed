@@ -1025,11 +1025,16 @@ msr3_writemseed (MS3Record *msr, const char *mspath, int8_t overwrite, uint32_t 
     if (fwrite (record, reclen, 1, (FILE *)ofp) != 1)
     {
       ms_log (2, "Error writing to output file\n");
+      packedrecords = -1;
       break;
     }
 
     packedrecords++;
   }
+
+  /* A negative result indicates a packing error */
+  if (result < 0 && packedrecords >= 0)
+    packedrecords = -1;
 
   /* Free packer and get total packed samples */
   msr3_pack_free (&packer, NULL);
