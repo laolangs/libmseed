@@ -879,7 +879,22 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
        * out-of-range exponent (which would be an undefined shift, and far
        * exceeds MAXRECLEN) and keep the validated record length set above. */
       if (*pMS2B1000_RECLEN (record + blkt_offset) < 31)
-        msr->reclen = (uint32_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
+      {
+        uint32_t b1000reclen = (uint32_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
+
+        /* Reject a record length larger than the supplied buffer, as the
+         * record cannot be fully contained and decoding would read beyond
+         * the buffer. */
+        if (b1000reclen > (uint32_t)reclen)
+        {
+          ms_log (2, "%s: Record length in Blockette 1000 (%u) exceeds the buffer length (%d)\n",
+                  msr->sid, b1000reclen, reclen);
+          if (flags & MSF_UNPACKDATA)
+            return MS_GENERROR;
+        }
+
+        msr->reclen = b1000reclen;
+      }
       else if (verbose)
         ms_log (1, "%s: Ignoring invalid record length exponent in Blockette 1000 (%u)\n", msr->sid,
                 *pMS2B1000_RECLEN (record + blkt_offset));
