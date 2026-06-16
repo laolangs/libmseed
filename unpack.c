@@ -883,14 +883,12 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
         uint32_t b1000reclen = (uint32_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
 
         /* Reject a record length larger than the supplied buffer, as the
-         * record cannot be fully contained and decoding would read beyond
-         * the buffer. */
+         * record cannot be fully contained whether unpacking or not. */
         if (b1000reclen > (uint32_t)reclen)
         {
           ms_log (2, "%s: Record length in Blockette 1000 (%u) exceeds the buffer length (%d)\n",
                   msr->sid, b1000reclen, reclen);
-          if (flags & MSF_UNPACKDATA)
-            return MS_GENERROR;
+          return MS_GENERROR;
         }
 
         msr->reclen = b1000reclen;
