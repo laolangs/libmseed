@@ -850,7 +850,7 @@ extern int64_t mstl3_writemseed (MS3TraceList *mstl, const char *mspath, int8_t 
 extern int libmseed_url_support (void);
 extern MS3FileParam *ms3_msfp_init (int64_t startoffset, int64_t endoffset, int fd);
 extern MS3FileParam *ms3_msfp_init_fd (int fd);
-/* Backwards compatibility alias for misnamed ms3_msfp_init_fd() */
+/** Backwards compatibility alias for misnamed ms3_msfp_init_fd() */
 #define ms3_mstl_init_fd(fd) ms3_msfp_init_fd(fd)
 /** @} */
 
