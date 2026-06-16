@@ -1107,6 +1107,15 @@ msr3_data_bounds (const MS3Record *msr, uint32_t *dataoffset, uint32_t *datasize
   else if (msr->formatversion == 2)
   {
     *dataoffset = HO2u (*pMS2FSDH_DATAOFFSET (msr->record), msr->swapflag & MSSWAP_HEADER);
+
+    /* Validate data offset is within the record to avoid unsigned underflow */
+    if (*dataoffset >= (uint32_t)msr->reclen)
+    {
+      ms_log (2, "%s: Data offset (%u) is beyond record length (%d)\n",
+              msr->sid, *dataoffset, msr->reclen);
+      return MS_GENERROR;
+    }
+
     *datasize = msr->reclen - *dataoffset;
   }
   else
