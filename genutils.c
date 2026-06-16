@@ -329,7 +329,7 @@ ms_sid2nslc_n (const char *sid, char *net, size_t netsize, char *sta, size_t sta
     if (*top && chan && chansize > 0)
     {
       /* Map extended channel to SEED channel if possible, otherwise direct copy */
-      if (ms_xchan2seedchan (chan, top))
+      if (chansize < 4 || ms_xchan2seedchan (chan, top))
       {
         strncpy (chan, top, chansize - 1);
         chan[chansize - 1] = '\0';
