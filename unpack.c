@@ -1028,8 +1028,10 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
   }
 
   msr->datalength = HO2u (*pMS2FSDH_DATAOFFSET (record), msr->swapflag);
-  if (msr->datalength > 0)
+  if (msr->datalength > 0 && msr->datalength < (uint32_t)msr->reclen)
     msr->datalength = msr->reclen - msr->datalength;
+  else
+    msr->datalength = 0;
 
   /* Determine byte order of the data and set the swapflag as needed;
      if no Blkt1000, assume the order is the same as the header */
