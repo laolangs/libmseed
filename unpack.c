@@ -1126,7 +1126,7 @@ msr3_data_bounds (const MS3Record *msr, uint32_t *dataoffset, uint32_t *datasize
     rawsize = msr->samplecnt * samplebytes;
 
     if (rawsize < *datasize)
-      *datasize = (uint16_t)rawsize;
+      *datasize = (uint32_t)rawsize;
   }
 
   /* If datasize is a multiple of 64-bytes and a Steim encoding, test for
