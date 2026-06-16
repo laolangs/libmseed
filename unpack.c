@@ -1116,7 +1116,7 @@ msr3_data_bounds (const MS3Record *msr, uint32_t *dataoffset, uint32_t *datasize
   /* Determine offset to data */
   if (msr->formatversion == 3)
   {
-    *dataoffset = MS3FSDH_LENGTH + (uint32_t)strlen (msr->sid) + msr->extralength;
+    *dataoffset = MS3FSDH_LENGTH + *pMS3FSDH_SIDLENGTH (msr->record) + msr->extralength;
     *datasize = msr->datalength;
   }
   else if (msr->formatversion == 2)
