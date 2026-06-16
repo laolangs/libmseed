@@ -11,6 +11,7 @@
   - Validate input payload size against sample count in ms_decode_data().
   - Fix size_t underflow in ms_sid2nslc_n() on zero-size buffers.
   - Accept value 255 for B201 MEDLookback and MEDPickAlgorithm.
+  - Avoid undefined shift from Blockette 1000 record length exponent.
   - Guard NULL Xnp pointer in Steim byte-swap.
   - Reject day-of-month 0 in VALIDMONTHDAY check.
   - Fix memory leaks on error paths in extraheaders.c and tracelist.c.

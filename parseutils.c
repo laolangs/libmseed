@@ -249,13 +249,17 @@ ms3_detect (const char *record, uint64_t recbuflen, uint8_t *formatversion)
       /* Found a 1000 blockette, not truncated */
       if (blkt_type == 1000 && (uint64_t)(blkt_offset + 8) <= recbuflen)
       {
-        foundlen = 1;
-
         /* Field 3 of B1000 is a uint8_t value describing the record
-         * length as 2^(value).  Calculate 2-raised with a shift. */
-        reclen = (uint64_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
-
-        break;
+         * length as 2^(value).  Calculate 2-raised with a shift.  Reject
+         * out-of-range exponents (a record length of 2^31 already far
+         * exceeds MAXRECLEN) to avoid an undefined shift; leave the length
+         * undetermined so the buffer scan below can search for the record. */
+        if (*pMS2B1000_RECLEN (record + blkt_offset) < 31)
+        {
+          foundlen = 1;
+          reclen = (uint64_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
+          break;
+        }
       }
 
       /* Safety check for invalid offset */
@@ -1223,8 +1227,12 @@ ms_parse_raw2 (const char *record, int maxreclen, int8_t details, int8_t swapfla
       {
         char order[40];
 
-        /* Calculate record size in bytes as 2^(blkt_1000->rec_len) */
-        b1000reclen = (uint32_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
+        /* Calculate record size in bytes as 2^(blkt_1000->rec_len).  Reject an
+         * out-of-range exponent (an undefined shift that also exceeds
+         * MAXRECLEN); 0 marks the length as undetermined for the checks below. */
+        b1000reclen = (*pMS2B1000_RECLEN (record + blkt_offset) < 31)
+                          ? (int)((uint32_t)1 << *pMS2B1000_RECLEN (record + blkt_offset))
+                          : 0;
 
         /* Big or little endian? */
         if (*pMS2B1000_BYTEORDER (record + blkt_offset) == 0)

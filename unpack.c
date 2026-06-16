@@ -875,8 +875,14 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
     {
       B1000offset = blkt_offset;
 
-      /* Calculate record length in bytes as 2^(B1000->reclen) */
-      msr->reclen = (uint32_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
+      /* Calculate record length in bytes as 2^(B1000->reclen).  Reject an
+       * out-of-range exponent (which would be an undefined shift, and far
+       * exceeds MAXRECLEN) and keep the validated record length set above. */
+      if (*pMS2B1000_RECLEN (record + blkt_offset) < 31)
+        msr->reclen = (uint32_t)1 << *pMS2B1000_RECLEN (record + blkt_offset);
+      else if (verbose)
+        ms_log (1, "%s: Ignoring invalid record length exponent in Blockette 1000 (%u)\n", msr->sid,
+                *pMS2B1000_RECLEN (record + blkt_offset));
 
       /* Compare against the specified length */
       if (msr->reclen != reclen && verbose)
