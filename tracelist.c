@@ -1931,7 +1931,10 @@ mstl3_unpack_recordlist (MS3TraceID *id, MS3TraceSeg *seg, void *output, uint64_
     filelist = filelistptr;
   }
 
-  /* If output buffer was allocated here, do some maintenance */
+  /* If decoding targeted the segment's own buffer, do some maintenance.
+   * When the caller supplied a separate output buffer the segment's
+   * datasamples/numsamples/sampletype must be left describing its existing
+   * data, not the data just written to the caller's buffer. */
   if (output == seg->datasamples)
   {
     /* Free allocated memory on error */
@@ -1944,11 +1947,11 @@ mstl3_unpack_recordlist (MS3TraceID *id, MS3TraceSeg *seg, void *output, uint64_
     else
     {
       seg->numsamples = totalunpackedsamples;
+
+      if (totalunpackedsamples > 0)
+        seg->sampletype = sampletype;
     }
   }
-
-  if (totalunpackedsamples > 0)
-    seg->sampletype = sampletype;
 
   return totalunpackedsamples;
 } /* End of mstl3_unpack_recordlist() */
