@@ -382,18 +382,23 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
       /* Determine read size */
       readsize = (MAXRECLEN - msfp->readlength);
 
-      /* Read data into record buffer */
-      readcount = (int)msio_fread (&msfp->input, msfp->readbuffer + msfp->readlength, readsize);
-
-      if (readcount <= 0 && !msio_feof (&msfp->input))
+      /* Read data into record buffer only when there is room; a full buffer
+       * (readsize == 0) means the buffer is exhausted for the current record
+       * and is handled by the oversized-record logic below, not a read error. */
+      if (readsize > 0)
       {
-        ms_log (2, "Error reading %s at offset %" PRId64 "\n", msfp->path, msfp->streampos);
-        retcode = MS_GENERROR;
-        break;
-      }
+        readcount = (int)msio_fread (&msfp->input, msfp->readbuffer + msfp->readlength, readsize);
 
-      /* Update read buffer length */
-      msfp->readlength += readcount;
+        if (readcount <= 0 && !msio_feof (&msfp->input))
+        {
+          ms_log (2, "Error reading %s at offset %" PRId64 "\n", msfp->path, msfp->streampos);
+          retcode = MS_GENERROR;
+          break;
+        }
+
+        /* Update read buffer length */
+        msfp->readlength += readcount;
+      }
     }
 
     /* Attempt to parse record from buffer */
