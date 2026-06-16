@@ -329,7 +329,7 @@ ms3_detect (const char *record, uint64_t recbuflen, uint8_t *formatversion)
 int
 ms_parse_raw3 (const char *record, int maxreclen, int8_t details)
 {
-  MS3Record msr;
+  MS3Record msr = MS3Record_INITIALIZER;
   const char *X;
   uint8_t b;
 
