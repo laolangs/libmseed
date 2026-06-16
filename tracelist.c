@@ -1473,12 +1473,14 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
       /* Reallocate buffer for reduced size needed, only if not pre-allocating */
       if (libmseed_prealloc_block_size == 0)
       {
-        if (!(seg->datasamples = libmseed_memory.realloc (
-                  seg->datasamples, (size_t)(seg->numsamples * sizeof (int32_t)))))
+        void *resized = libmseed_memory.realloc (
+            seg->datasamples, (size_t)(seg->numsamples * sizeof (int32_t)));
+        if (resized == NULL)
         {
           ms_log (2, "Cannot re-allocate buffer for sample conversion\n");
           return -1;
         }
+        seg->datasamples = resized;
         seg->datasize = seg->numsamples * sizeof (int32_t);
       }
     }
@@ -1502,12 +1504,14 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
       /* Reallocate buffer for reduced size needed, only if not pre-allocating */
       if (libmseed_prealloc_block_size == 0)
       {
-        if (!(seg->datasamples = libmseed_memory.realloc (
-                  seg->datasamples, (size_t)(seg->numsamples * sizeof (float)))))
+        void *resized = libmseed_memory.realloc (
+            seg->datasamples, (size_t)(seg->numsamples * sizeof (float)));
+        if (resized == NULL)
         {
           ms_log (2, "Cannot re-allocate buffer after sample conversion\n");
           return -1;
         }
+        seg->datasamples = resized;
         seg->datasize = seg->numsamples * sizeof (float);
       }
     }
@@ -1588,14 +1592,15 @@ mstl3_resize_buffers (MS3TraceList *mstl)
 
         if (seg->datasize > datasize)
         {
-          seg->datasamples = libmseed_memory.realloc (seg->datasamples, datasize);
+          void *resized = libmseed_memory.realloc (seg->datasamples, datasize);
 
-          if (seg->datasamples == NULL)
+          if (resized == NULL)
           {
             ms_log (2, "%s: Cannot (re)allocate memory\n", id->sid);
             return MS_GENERROR;
           }
 
+          seg->datasamples = resized;
           seg->datasize = datasize;
         }
       }
@@ -2281,15 +2286,16 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
           /* Reallocate buffer for reduced size if not pre-allocating */
           if (libmseed_prealloc_block_size == 0)
           {
-            packer->current_seg->datasamples =
+            void *resized =
                 libmseed_memory.realloc (packer->current_seg->datasamples, bufsize);
 
-            if (!packer->current_seg->datasamples)
+            if (resized == NULL)
             {
               ms_log (2, "Cannot (re)allocate datasamples buffer\n");
               return -1;
             }
 
+            packer->current_seg->datasamples = resized;
             packer->current_seg->datasize = (uint64_t)bufsize;
           }
         }
@@ -2694,14 +2700,15 @@ mstl3_pack_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg,
       /* Reallocate buffer for reduced size needed, only if not pre-allocating */
       if (libmseed_prealloc_block_size == 0)
       {
-        seg->datasamples = libmseed_memory.realloc (seg->datasamples, bufsize);
+        void *resized = libmseed_memory.realloc (seg->datasamples, bufsize);
 
-        if (seg->datasamples == NULL)
+        if (resized == NULL)
         {
           ms_log (2, "Cannot (re)allocate datasamples buffer\n");
           return -1;
         }
 
+        seg->datasamples = resized;
         seg->datasize = (uint64_t)bufsize;
       }
     }
