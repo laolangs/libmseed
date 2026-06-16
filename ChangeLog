@@ -13,6 +13,7 @@
   - Reject day-of-month 0 in VALIDMONTHDAY check.
   - Fix memory leaks on error paths in extraheaders.c and tracelist.c.
   - Pass unsigned char to ctype functions.
+  -
   - Fix tutorial example code, thanks to P. Schmidt for reporting.
 
 2026.094: v3.4.0
