@@ -289,7 +289,7 @@ ms_sid2nslc_n (const char *sid, char *net, size_t netsize, char *sta, size_t sta
       next = ptr + 1;
       *ptr = '\0';
 
-      if (net)
+      if (net && netsize > 0)
       {
         strncpy (net, top, netsize - 1);
         net[netsize - 1] = '\0';
@@ -303,9 +303,9 @@ ms_sid2nslc_n (const char *sid, char *net, size_t netsize, char *sta, size_t sta
       next = ptr + 1;
       *ptr = '\0';
 
-      if (sta)
+      if (sta && stasize > 0)
       {
-        strncpy (sta, top, stasize);
+        strncpy (sta, top, stasize - 1);
         sta[stasize - 1] = '\0';
       }
 
@@ -317,21 +317,21 @@ ms_sid2nslc_n (const char *sid, char *net, size_t netsize, char *sta, size_t sta
       next = ptr + 1;
       *ptr = '\0';
 
-      if (loc)
+      if (loc && locsize > 0)
       {
-        strncpy (loc, top, locsize);
+        strncpy (loc, top, locsize - 1);
         loc[locsize - 1] = '\0';
       }
 
       top = next;
     }
     /* Channel */
-    if (*top && chan)
+    if (*top && chan && chansize > 0)
     {
       /* Map extended channel to SEED channel if possible, otherwise direct copy */
       if (ms_xchan2seedchan (chan, top))
       {
-        strncpy (chan, top, chansize);
+        strncpy (chan, top, chansize - 1);
         chan[chansize - 1] = '\0';
       }
     }
