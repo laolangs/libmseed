@@ -216,10 +216,10 @@ ms3_detect (const char *record, uint64_t recbuflen, uint8_t *formatversion)
       ms_gswap4 (&datalength);
     }
 
-    reclen = MS3FSDH_LENGTH /* Length of fixed portion of header */
-             + sidlength    /* Length of source identifier */
-             + extralength  /* Length of extra headers */
-             + datalength;  /* Length of data payload */
+    reclen = (int64_t)MS3FSDH_LENGTH /* Length of fixed portion of header */
+             + sidlength             /* Length of source identifier */
+             + extralength           /* Length of extra headers */
+             + datalength;           /* Length of data payload */
 
     foundlen = 1;
   }
