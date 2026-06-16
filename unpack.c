@@ -1712,19 +1712,19 @@ ms2_blktlen (uint16_t blkttype, const char *blkt, int8_t swapflag)
     blktlen = 12;
     break;
   case 200: /* Generic Event Detection */
-    blktlen = 28;
+    blktlen = 52;
     break;
   case 201: /* Murdock Event Detection */
-    blktlen = 36;
+    blktlen = 60;
     break;
   case 300: /* Step Calibration */
-    blktlen = 32;
+    blktlen = 60;
     break;
   case 310: /* Sine Calibration */
-    blktlen = 32;
+    blktlen = 60;
     break;
   case 320: /* Pseudo-random Calibration */
-    blktlen = 28;
+    blktlen = 64;
     break;
   case 390: /* Generic Calibration */
     blktlen = 28;
@@ -1736,7 +1736,7 @@ ms2_blktlen (uint16_t blkttype, const char *blkt, int8_t swapflag)
     blktlen = 16;
     break;
   case 500: /* Timing */
-    blktlen = 8;
+    blktlen = 200;
     break;
   case 1000: /* Data Only SEED */
     blktlen = 8;

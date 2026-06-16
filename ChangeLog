@@ -1,8 +1,9 @@
-2026.166:
+2026.167:
   - Improve correctness of internal glob matching routines.
   - Fix inverted sample rate comparison with custom tolerance for trace lists.
   - Always return error from msr3_writemseed() on write or packing failure.
   - Avoid spurious read error when record buffer is full.
+  - Fix lookup for v2 Blockette lengths for uncommon blockettes.
   - Detect precision loss for negative samples in mstl3_convertsamples().
   - Fix buffer overflow in B201 MEDSNR packing.
   - Fix out-of-bounds access on long or failed log messages.
