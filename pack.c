@@ -1475,7 +1475,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
         {
           yyjson_arr_iter_init (ehsubarr, &ehsubiter);
 
-          while ((ehsubiterval = yyjson_arr_iter_next (&ehsubiter)))
+          while ((ehsubiterval = yyjson_arr_iter_next (&ehsubiter)) && idx < 6)
           {
             if (!yyjson_is_num (ehsubiterval))
               continue;
