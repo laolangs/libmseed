@@ -233,8 +233,9 @@ ms3_detect (const char *record, uint64_t recbuflen, uint8_t *formatversion)
 
     blkt_offset = HO2u (*pMS2FSDH_BLOCKETTEOFFSET (record), swapflag);
 
-    /* Loop through blockettes as long as number is non-zero and viable */
-    while (blkt_offset != 0 && blkt_offset > 47 && blkt_offset <= recbuflen)
+    /* Loop through blockettes as long as number is non-zero and the 4-byte
+     * blockette header (type and next offset) is fully within the buffer */
+    while (blkt_offset != 0 && blkt_offset > 47 && (uint64_t)blkt_offset + 4 <= recbuflen)
     {
       memcpy (&blkt_type, record + blkt_offset, 2);
       memcpy (&next_blkt, record + blkt_offset + 2, 2);
@@ -810,8 +811,8 @@ ms_parse_raw2 (const char *record, int maxreclen, int8_t details, int8_t swapfla
     uint16_t next_blkt;
     const char *blkt_desc;
 
-    /* Traverse blockette chain */
-    while (blkt_offset != 0 && blkt_offset < maxreclen)
+    /* Traverse blockette chain, requiring the 4-byte header to fully fit */
+    while (blkt_offset != 0 && (uint64_t)blkt_offset + 4 <= maxreclen)
     {
       /* Every blockette has a similar 4 byte header: type and next */
       memcpy (&blkt_type, record + blkt_offset, 2);
