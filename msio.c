@@ -209,6 +209,7 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     struct header_callback_parameters hcp;
 
     io->type = LMIO_URL;
+    io->handle2 = NULL;
 
     /* Check for URL debugging environment variable */
     if (libmseed_url_debug < 0)
@@ -241,7 +242,7 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     if (libmseed_url_debug && curl_easy_setopt (io->handle, CURLOPT_VERBOSE, 1L) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_VERBOSE\n");
-      return -1;
+      goto onerror;
     }
 
     /* SSL peer and host verification */
@@ -250,14 +251,14 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
          curl_easy_setopt (io->handle, CURLOPT_SSL_VERIFYHOST, 0L) != CURLE_OK))
     {
       ms_log (2, "Cannot set CURLOPT_SSL_VERIFYPEER and/or CURLOPT_SSL_VERIFYHOST\n");
-      return -1;
+      goto onerror;
     }
 
     /* Set URL */
     if (curl_easy_setopt (io->handle, CURLOPT_URL, path) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_URL\n");
-      return -1;
+      goto onerror;
     }
 
     /* Set default User-Agent header, can be overridden via custom header */
@@ -265,48 +266,48 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
                           "libmseed/" LIBMSEED_VERSION " libcurl/" LIBCURL_VERSION) != CURLE_OK)
     {
       ms_log (2, "Cannot set default CURLOPT_USERAGENT\n");
-      return -1;
+      goto onerror;
     }
 
     /* Disable signals */
     if (curl_easy_setopt (io->handle, CURLOPT_NOSIGNAL, 1L) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_NOSIGNAL\n");
-      return -1;
+      goto onerror;
     }
 
     /* Return failure codes on errors */
     if (curl_easy_setopt (io->handle, CURLOPT_FAILONERROR, 1L) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_FAILONERROR\n");
-      return -1;
+      goto onerror;
     }
 
     /* Follow HTTP redirects */
     if (curl_easy_setopt (io->handle, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_FOLLOWLOCATION\n");
-      return -1;
+      goto onerror;
     }
 
     /* Configure write callback for recv'ed data */
     if (curl_easy_setopt (io->handle, CURLOPT_WRITEFUNCTION, recv_callback) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_WRITEFUNCTION\n");
-      return -1;
+      goto onerror;
     }
 
     /* Configure the libcurl multi handle, for use with the asynchronous interface */
     if ((io->handle2 = curl_multi_init ()) == NULL)
     {
       ms_log (2, "Cannot initialize CURL multi handle\n");
-      return -1;
+      goto onerror;
     }
 
     if (curl_multi_add_handle (io->handle2, io->handle) != CURLM_OK)
     {
       ms_log (2, "Cannot add CURL handle to multi handle\n");
-      return -1;
+      goto onerror;
     }
 
     /* Set byte ranging */
@@ -331,7 +332,7 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
       if (curl_easy_setopt (io->handle, CURLOPT_RANGE, rangestr) != CURLE_OK)
       {
         ms_log (2, "Cannot set CURLOPT_RANGE to '%s'\n", rangestr);
-        return -1;
+        goto onerror;
       }
     }
 
@@ -345,13 +346,13 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
       if (curl_easy_setopt (io->handle, CURLOPT_HEADERFUNCTION, header_callback) != CURLE_OK)
       {
         ms_log (2, "Cannot set CURLOPT_HEADERFUNCTION\n");
-        return -1;
+        goto onerror;
       }
 
       if (curl_easy_setopt (io->handle, CURLOPT_HEADERDATA, (void *)&hcp) != CURLE_OK)
       {
         ms_log (2, "Cannot set CURLOPT_HEADERDATA\n");
-        return -1;
+        goto onerror;
       }
     }
 
@@ -359,7 +360,7 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     if (gCURLheaders && curl_easy_setopt (io->handle, CURLOPT_HTTPHEADER, gCURLheaders) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_HTTPHEADER\n");
-      return -1;
+      goto onerror;
     }
 
     /* Set connection as still running */
@@ -379,12 +380,12 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     if (response_code == 404)
     {
       ms_log (2, "Cannot open %s: Not Found (404)\n", path);
-      return -1;
+      goto onerror;
     }
     else if (response_code >= 400 && response_code < 600)
     {
       ms_log (2, "Cannot open %s: response code %ld\n", path, response_code);
-      return -1;
+      goto onerror;
     }
 #endif /* defined(LIBMSEED_URL) */
   }
@@ -395,7 +396,7 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     if ((io->handle = fopen (path, mode)) == NULL)
     {
       ms_log (2, "Cannot open: %s (%s)\n", path, strerror (errno));
-      return -1;
+      goto onerror;
     }
 
     /* Seek to position if start offset is provided */
@@ -404,12 +405,18 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
       if (lmp_fseek64 (io->handle, *startoffset, SEEK_SET))
       {
         ms_log (2, "Cannot seek in %s to offset %" PRId64 "\n", path, *startoffset);
-        return -1;
+        goto onerror;
       }
     }
   }
 
   return 0;
+
+onerror:
+  /* Release any open handle so it does not leak on error */
+  msio_fclose (io);
+
+  return -1;
 } /* End of msio_fopen() */
 
 /*********************************************************************
