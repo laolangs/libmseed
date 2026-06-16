@@ -848,7 +848,7 @@ ms_parse_raw2 (const char *record, int maxreclen, int8_t details, int8_t swapfla
       endofblockettes = blkt_offset + blkt_length - 1;
 
       /* Sanity check that the blockette is contained in the record */
-      if (endofblockettes > maxreclen)
+      if (endofblockettes >= maxreclen)
       {
         ms_log (2,
                 "%s: Blockette type %d at offset %d with length %d does not fit in record (%d)\n",
