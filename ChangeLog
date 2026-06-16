@@ -3,7 +3,6 @@
   - Fix inverted sample rate comparison with custom tolerance for trace lists.
   - Always return error from msr3_writemseed() on write or packing failure.
   - Avoid spurious read error when record buffer is full.
-  - Fix lookup for v2 Blockette lengths for uncommon blockettes.
   - Detect precision loss for negative samples in mstl3_convertsamples().
   - Fix buffer overflow in B201 MEDSNR packing.
   - Fix out-of-bounds access on long or failed log messages.
@@ -16,6 +15,7 @@
   - Fix out-of-bounds read in msr3_data_bounds() from unvalidated v2 data offset.
   - Fix dangling stack pointer retained by libcurl header callback.
   - Fix resource leaks on msio_fopen() error paths.
+  - Fix lookup for v2 Blockette lengths for uncommon blockettes for bounds checks.
   - Validate input payload size against sample count in ms_decode_data().
   - Fix size_t underflow in ms_sid2nslc_n() on zero-size buffers.
   - Limit samples per record to 16-bit limit when packing miniSEED 2.

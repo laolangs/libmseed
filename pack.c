@@ -1050,6 +1050,15 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
     return -1;
   }
 
+  /* Ensure the supplied buffer can hold the fixed header and mandatory
+   * Blockette 1000 that are written unconditionally below */
+  if (recbuflen < (uint32_t)(MS2FSDH_LENGTH + 8))
+  {
+    ms_log (2, "%s: Buffer length (%u) is not large enough for fixed header and Blockette 1000\n",
+            msr->sid, recbuflen);
+    return -1;
+  }
+
   /* Calculate the record length as an exponent of 2 */
   for (reclenfind = 1, reclenexp = 1; reclenfind <= MAXRECLEN; reclenexp++)
   {
@@ -1287,6 +1296,13 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
   /* Add Blockette 1001 if microsecond offset or timing quality is present */
   if (yyjson_ptr_get_uint (ehroot, "/FDSN/Time/Quality", &header_uint) || usec_offset)
   {
+    if ((recbuflen - written) < 8)
+    {
+      ms_log (2, "%s: Record length not large enough for B1001\n", msr->sid);
+      yyjson_doc_free (ehdoc);
+      return -1;
+    }
+
     *next_blockette = HO2u ((uint16_t)written, swapflag);
     next_blockette = pMS2B1001_NEXT (record + written);
     *pMS2FSDH_NUMBLOCKETTES (record) += 1;
@@ -1313,6 +1329,13 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
   /* Add Blockette 100 if sample rate is not well represented by factor/multiplier */
   if (fabs (msr3_sampratehz (msr) - ms_nomsamprate (factor, multiplier)) > 0.0001)
   {
+    if ((recbuflen - written) < 12)
+    {
+      ms_log (2, "%s: Record length not large enough for B100\n", msr->sid);
+      yyjson_doc_free (ehdoc);
+      return -1;
+    }
+
     *next_blockette = HO2u ((uint16_t)written, swapflag);
     next_blockette = pMS2B100_NEXT (record + written);
     *pMS2FSDH_NUMBLOCKETTES (record) += 1;
