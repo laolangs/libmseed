@@ -11,6 +11,7 @@
   - Fix data size truncation for large fixed-length-encoded records.
   - Fix integer overflow computing v3 record length in ms3_detect().
   - Fix out-of-bounds read in msr3_data_bounds() from unvalidated v2 data offset.
+  - Fix dangling stack pointer retained by libcurl header callback.
   - Validate input payload size against sample count in ms_decode_data().
   - Fix size_t underflow in ms_sid2nslc_n() on zero-size buffers.
   - Accept value 255 for B201 MEDLookback and MEDPickAlgorithm.

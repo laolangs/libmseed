@@ -368,6 +368,12 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     /* Start connection, get status & headers, without consuming any data */
     msio_fread (io, NULL, 0);
 
+    /* Detach the header callback's data pointer (a local on this stack frame)
+     * now that the response headers have been consumed, so a later header
+     * callback (e.g. on trailing headers) cannot dereference it after return. */
+    if (startoffset || endoffset)
+      curl_easy_setopt (io->handle, CURLOPT_HEADERDATA, NULL);
+
     curl_easy_getinfo (io->handle, CURLINFO_RESPONSE_CODE, &response_code);
 
     if (response_code == 404)
