@@ -1485,11 +1485,11 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
         }
 
         if (yyjson_ptr_get_uint (ehiterval, "/MEDLookback", &header_uint) &&
-            header_uint < UINT8_MAX)
+            header_uint <= UINT8_MAX)
           *pMS2B201_LOOPBACK (record + written) = (uint8_t)header_uint;
 
         if (yyjson_ptr_get_uint (ehiterval, "/MEDPickAlgorithm", &header_uint) &&
-            header_uint < UINT8_MAX)
+            header_uint <= UINT8_MAX)
           *pMS2B201_PICKALGORITHM (record + written) = (uint8_t)header_uint;
 
         if (yyjson_ptr_get_str (ehiterval, "/Detector", &header_string))
