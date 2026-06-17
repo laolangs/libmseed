@@ -284,6 +284,17 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
         packer->dataoffset = ((packer->dataoffset + 63) / 64) * 64;
       }
 
+      /* The (possibly aligned) data offset must still leave room for data
+       * within the record and fit the 16-bit v2 data-offset field. */
+      if ((uint32_t)packer->dataoffset >= packer->maxreclen || packer->dataoffset > UINT16_MAX)
+      {
+        ms_log (2, "%s: Data offset (%d) does not fit within record length (%u)\n", msr->sid,
+                packer->dataoffset, packer->maxreclen);
+        libmseed_memory.free (packer->rawrec);
+        libmseed_memory.free (packer);
+        return NULL;
+      }
+
       /* Set data offset in header */
       *pMS2FSDH_DATAOFFSET (packer->rawrec) = HO2u (packer->dataoffset, packer->swapflag);
     }
