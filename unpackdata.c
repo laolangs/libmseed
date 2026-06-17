@@ -217,7 +217,7 @@ msr_decode_steim1 (int32_t *input, uint64_t inputlength, uint64_t samplecount, i
     return -1;
 
   /* Make sure output buffer is sufficient for all output samples */
-  if (outputlength < (samplecount * sizeof (int32_t)))
+  if (samplecount > outputlength / sizeof (int32_t))
   {
     ms_log (2, "%s(%s) Output buffer not large enough for decoded samples\n", __func__, srcname);
     return -1;
@@ -408,7 +408,7 @@ msr_decode_steim2 (int32_t *input, uint64_t inputlength, uint64_t samplecount, i
     return -1;
 
   /* Make sure output buffer is sufficient for all output samples */
-  if (outputlength < (samplecount * sizeof (int32_t)))
+  if (samplecount > outputlength / sizeof (int32_t))
   {
     ms_log (2, "%s(%s) Output buffer not large enough for decoded samples\n", __func__, srcname);
     return -1;
