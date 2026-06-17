@@ -1576,8 +1576,14 @@ ms_mdtimestr2nstime (const char *timestr)
   fields = sscanf (timestr, "%d%*[-,/:.]%d%*[-,/:.]%d%*[-,/:.Tt ]%d%*[-,/:.]%d%*[-,/:.]%d%lf",
                    &year, &mon, &mday, &hour, &min, &sec, &fsec);
 
-  /* Convert fractional seconds to nanoseconds */
-  if (fsec != 0.0)
+  /* Convert fractional seconds to nanoseconds.  Restrict to [0,1) so the
+   * double-to-uint32 conversion is well defined. */
+  if (fsec < 0.0 || fsec >= 1.0)
+  {
+    ms_log (2, "fractional second (%g) is out of range\n", fsec);
+    return NSTERROR;
+  }
+  else if (fsec != 0.0)
   {
     nsec = (uint32_t)(fsec * 1000000000.0 + 0.5);
   }
@@ -1681,8 +1687,14 @@ ms_seedtimestr2nstime (const char *seedtimestr)
   fields = sscanf (seedtimestr, "%d%*[-,:.]%d%*[-,:.Tt ]%d%*[-,:.]%d%*[-,:.]%d%lf", &year, &yday,
                    &hour, &min, &sec, &fsec);
 
-  /* Convert fractional seconds to nanoseconds */
-  if (fsec != 0.0)
+  /* Convert fractional seconds to nanoseconds.  Restrict to [0,1) so the
+   * double-to-uint32 conversion is well defined. */
+  if (fsec < 0.0 || fsec >= 1.0)
+  {
+    ms_log (2, "fractional second (%g) is out of range\n", fsec);
+    return NSTERROR;
+  }
+  else if (fsec != 0.0)
   {
     nsec = (uint32_t)(fsec * 1000000000.0 + 0.5);
   }
