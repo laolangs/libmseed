@@ -794,6 +794,9 @@ msr3_pack_header3 (const MS3Record *msr, char *record, uint32_t recbuflen, int8_
 
   extraoffset = MS3FSDH_LENGTH + (int)sidlength;
 
+  /* A NULL extra pointer means no extra headers regardless of extralength */
+  uint16_t extralength = (msr->extra) ? msr->extralength : 0;
+
   /* Build fixed header */
   record[0] = 'M';
   record[1] = 'S';
@@ -815,13 +818,13 @@ msr3_pack_header3 (const MS3Record *msr, char *record, uint32_t recbuflen, int8_
 
   *pMS3FSDH_PUBVERSION (record) = msr->pubversion;
   *pMS3FSDH_SIDLENGTH (record) = (uint8_t)sidlength;
-  *pMS3FSDH_EXTRALENGTH (record) = HO2u (msr->extralength, swapflag);
+  *pMS3FSDH_EXTRALENGTH (record) = HO2u (extralength, swapflag);
   memcpy (pMS3FSDH_SID (record), msr->sid, sidlength);
 
-  if (msr->extralength > 0)
-    memcpy (record + extraoffset, msr->extra, msr->extralength);
+  if (extralength > 0)
+    memcpy (record + extraoffset, msr->extra, extralength);
 
-  return (MS3FSDH_LENGTH + (int)sidlength + msr->extralength);
+  return (MS3FSDH_LENGTH + (int)sidlength + extralength);
 } /* End of msr3_pack_header3() */
 
 /** ************************************************************************
