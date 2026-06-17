@@ -1161,10 +1161,17 @@ msr3_data_bounds (const MS3Record *msr, uint32_t *dataoffset, uint32_t *datasize
       break;
     }
 
-    rawsize = msr->samplecnt * samplebytes;
+    /* Limit datasize to the bytes the sample count would occupy when smaller and
+     * guard against a negative samplecnt and compute without overflow.
+     * The product is only relevant when it could be below *datasize (a
+     * uint32), which the divide-based test below guarantees. */
+    if (msr->samplecnt >= 0 && (uint64_t)msr->samplecnt <= (uint64_t)*datasize / samplebytes)
+    {
+      rawsize = (uint64_t)msr->samplecnt * samplebytes;
 
-    if (rawsize < *datasize)
-      *datasize = (uint32_t)rawsize;
+      if (rawsize < *datasize)
+        *datasize = (uint32_t)rawsize;
+    }
   }
 
   /* If datasize is a multiple of 64-bytes and a Steim encoding, test for
