@@ -153,6 +153,24 @@ ms3_msfp_init (int64_t startoffset, int64_t endoffset, int fd)
       libmseed_memory.free (msfp);
       return NULL;
     }
+
+    /* Seek to the start offset and set stream position; the dup'd descriptor
+     * shares the file offset of the original and is not otherwise positioned.
+     * Only required when a start offset is requested, which also keeps
+     * non-seekable descriptors (e.g. pipes) usable when startoffset is 0. */
+    if (msfp->startoffset > 0)
+    {
+      if (lmp_fseek64 (msfp->input.handle, msfp->startoffset, SEEK_SET))
+      {
+        ms_log (2, "%s(): Cannot seek file descriptor %d to offset %" PRId64 "\n",
+                __func__, fd, msfp->startoffset);
+        msio_fclose (&msfp->input);
+        libmseed_memory.free (msfp);
+        return NULL;
+      }
+
+      msfp->streampos = msfp->startoffset;
+    }
   }
 
   return msfp;
