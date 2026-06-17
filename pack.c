@@ -931,10 +931,10 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
   *pMS2FSDH_NUMSAMPLES (record) = HO2u ((uint16_t)msr->samplecnt, swapflag);
   *pMS2FSDH_DATAOFFSET (record) = HO2u (dataoffset, swapflag);
 
-  /* Zero any space between encoded data and end of record */
-  int32_t content = dataoffset + origdatasize;
-  if (content < msr->reclen)
-    memset (record + content, 0, msr->reclen - content);
+  /* Zero any space between encoded data and end of record.  totalsize is the
+   * end of the encoded data (dataoffset + origdatasize), computed above. */
+  if (totalsize < (uint32_t)msr->reclen)
+    memset (record + totalsize, 0, (uint32_t)msr->reclen - totalsize);
 
   if (verbose >= 1)
     ms_log (0, "%s: Repacked %" PRId64 " samples into a %u byte record\n", msr->sid, msr->samplecnt,
