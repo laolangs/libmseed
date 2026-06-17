@@ -2024,19 +2024,20 @@ lmp_nanosleep (uint64_t nanoseconds)
 #if defined(LMP_WIN)
 
   /* SleepEx is limited to milliseconds */
-  SleepEx ((DWORD)(nanoseconds / 1e6), 1);
+  SleepEx ((DWORD)(nanoseconds / 1000000ULL), 1);
 
   return 0;
 #else
 
-  struct timespec treq, trem;
+  struct timespec treq;
+  struct timespec trem = {0};
 
-  treq.tv_sec = (time_t)(nanoseconds / 1e9);
-  treq.tv_nsec = (long)(nanoseconds - (uint64_t)treq.tv_sec * 1e9);
+  treq.tv_sec = (time_t)(nanoseconds / 1000000000ULL);
+  treq.tv_nsec = (long)(nanoseconds % 1000000000ULL);
 
   nanosleep (&treq, &trem);
 
-  return trem.tv_sec * 1e9 + trem.tv_nsec;
+  return (uint64_t)trem.tv_sec * 1000000000ULL + (uint64_t)trem.tv_nsec;
 
 #endif
 } /* End of lmp_nanosleep() */
