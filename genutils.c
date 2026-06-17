@@ -1308,7 +1308,19 @@ ms_time2nstime_int (int year, int yday, int hour, int min, int sec, uint32_t nse
 
   days = (365 * (shortyear - 70) + intervening_leap_days + (yday - 1));
 
-  nstime = (nstime_t)(60 * (60 * ((nstime_t)24 * days + hour) + min) + sec) * NSTMODULUS + nsec;
+  nstime_t seconds = (nstime_t)(60 * (60 * ((nstime_t)24 * days + hour) + min) + sec);
+
+  /* Guard against int64 nanosecond overflow/underflow at the extremes of the
+   * representable range (roughly year 1678 .. mid-2262).  nsec is positive, so
+   * it only matters for the upper bound. */
+  if (seconds > (INT64_MAX - (nstime_t)nsec) / NSTMODULUS ||
+      seconds < INT64_MIN / NSTMODULUS)
+  {
+    ms_log (2, "Time (year %d, day %d) is beyond the representable nstime range\n", year, yday);
+    return NSTERROR;
+  }
+
+  nstime = seconds * NSTMODULUS + nsec;
 
   return nstime;
 } /* End of ms_time2nstime_int() */
