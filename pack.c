@@ -1307,7 +1307,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
   /* Add Blockette 1001 if microsecond offset or timing quality is present */
   if (yyjson_ptr_get_uint (ehroot, "/FDSN/Time/Quality", &header_uint) || usec_offset)
   {
-    if ((recbuflen - written) < 8)
+    if (written > UINT16_MAX || (uint64_t)written + 8 > recbuflen)
     {
       ms_log (2, "%s: Record length not large enough for B1001\n", msr->sid);
       yyjson_doc_free (ehdoc);
@@ -1340,7 +1340,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
   /* Add Blockette 100 if sample rate is not well represented by factor/multiplier */
   if (fabs (msr3_sampratehz (msr) - ms_nomsamprate (factor, multiplier)) > 0.0001)
   {
-    if ((recbuflen - written) < 12)
+    if (written > UINT16_MAX || (uint64_t)written + 12 > recbuflen)
     {
       ms_log (2, "%s: Record length not large enough for B100\n", msr->sid);
       yyjson_doc_free (ehdoc);
@@ -1372,7 +1372,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
 
       blockette_length = 200;
 
-      if ((recbuflen - written) < blockette_length)
+      if (written > UINT16_MAX || (uint64_t)written + blockette_length > recbuflen)
       {
         ms_log (2, "%s: Record length not large enough for B500\n", msr->sid);
         yyjson_doc_free (ehdoc);
@@ -1450,7 +1450,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
         blockette_length = 52;
       }
 
-      if ((recbuflen - written) < blockette_length)
+      if (written > UINT16_MAX || (uint64_t)written + blockette_length > recbuflen)
       {
         ms_log (2, "%s: Record length not large enough for B%u\n", msr->sid, blockette_type);
         yyjson_doc_free (ehdoc);
@@ -1592,7 +1592,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
         return -1;
       }
 
-      if ((recbuflen - written) < blockette_length)
+      if (written > UINT16_MAX || (uint64_t)written + blockette_length > recbuflen)
       {
         ms_log (2, "%s: Record length not large enough for B%u\n", msr->sid, blockette_type);
         yyjson_doc_free (ehdoc);
@@ -1774,7 +1774,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
         blockette_type = 395;
         blockette_length = 16;
 
-        if ((recbuflen - written) < blockette_length)
+        if (written > UINT16_MAX || (uint64_t)written + blockette_length > recbuflen)
         {
           ms_log (2, "%s: Record length not large enough for B%u\n", msr->sid, blockette_type);
           yyjson_doc_free (ehdoc);
