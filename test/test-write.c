@@ -66,6 +66,8 @@ extern int cmpfiles (char *fileA, char *fileB);
 #define TESTFILE_NSEC_V2    "testdata-nsec.mseed2"
 #define TESTFILE_OLDEN_V2   "testdata-olden.mseed2"
 #define TESTFILE_ODDRATE_V2 "testdata-oddrate.mseed2"
+#define TESTFILE_TIMECARRY_V2 "testdata-timecarry.mseed2"
+#define TESTFILE_BTIMECARRY_V2 "testdata-btimecarry.mseed2"
 #define TESTFILE_MSTLPACK_V2 "testdata-mstlpack.mseed2"
 #define TESTFILE_FLUSHIDLE_V2 "testdata-flushidle.mseed2"
 
@@ -590,6 +592,153 @@ TEST (write, msr3_writemseed_oddrate)
 
   msr->datasamples = NULL;
   msr3_free (&msr);
+}
+
+/* Test that miniSEED v2 continuation records correctly carry a 100 microsecond
+ * rounding carry into the next second.
+ *
+ * A record's start time is encoded as tenths-of-milliseconds (fsec) plus a
+ * microsecond offset in the range -50 to +49.  When the fractional second is
+ * within 50 microseconds of the next second boundary (i.e. >= 0.99995s), the
+ * rounded fsec/offset pair carries into the next second and the record's
+ * Y/D/H/M/S fields must be derived from that carried time, not the raw,
+ * uncarried start time.
+ *
+ * This regression-tests the H3 fix in msr3_pack_next(): previously the raw
+ * time was used for continuation records, making them exactly one second
+ * early whenever their start fraction fell in that band.  A small record
+ * length is used to force many continuation records at a 1 Hz sample rate,
+ * so every continuation record's start fraction repeats the initial,
+ * in-carry-band fraction.
+ */
+TEST (write, msr3_writemseed_v2_continuation_timecarry)
+{
+  MS3Record *msr = NULL;
+  MS3Record *rmsr = NULL;
+  int32_t isinedata[SINE_DATA_SAMPLES];
+  nstime_t starttime;
+  nstime_t expected;
+  int64_t cumulative = 0;
+  int reccount = 0;
+  uint32_t flags = MSF_FLUSHDATA | MSF_PACKVER2;
+  int64_t rv;
+  int rrv;
+  int idx;
+
+  /* Create integer sine data set */
+  for (idx = 0; idx < SINE_DATA_SAMPLES; idx++)
+  {
+    isinedata[idx] = (int32_t)(dsinedata[idx]);
+  }
+
+  msr = msr3_init (msr);
+  REQUIRE (msr != NULL, "msr3_init() returned unexpected NULL");
+
+  strcpy (msr->sid, "FDSN:XX_TEST__B_H_Z");
+  msr->reclen = 128; /* Small reclen forces many continuation records */
+  msr->pubversion = 1;
+  msr->samprate = 1.0;
+  msr->encoding = DE_INT32;
+  msr->numsamples  = SINE_DATA_SAMPLES;
+  msr->samplecnt   = SINE_DATA_SAMPLES;
+  msr->datasamples = isinedata;
+  msr->sampletype  = 'i';
+
+  /* Start time fraction (.999980s) is within the 50 microsecond carry band */
+  starttime = ms_timestr2nstime ("2012-01-01T00:00:00.999980Z");
+  msr->starttime = starttime;
+
+  rv = msr3_writemseed (msr, TESTFILE_TIMECARRY_V2, 1, flags, 0);
+  REQUIRE (rv > 0, "msr3_writemseed() return unexpected value");
+
+  msr->datasamples = NULL;
+  msr3_free (&msr);
+
+  /* Read back every record and verify its start time against the time
+   * calculated independently via ms_sampletime(), which would catch a
+   * continuation record written exactly one second early. */
+  while ((rrv = ms3_readmsr (&rmsr, TESTFILE_TIMECARRY_V2, 0, 0)) == MS_NOERROR)
+  {
+    expected = ms_sampletime (starttime, cumulative, 1.0);
+
+    CHECK (rmsr->starttime == expected,
+           "Record start time does not match expected time (continuation time carry)");
+
+    cumulative += rmsr->samplecnt;
+    reccount++;
+  }
+
+  CHECK (rrv == MS_ENDOFFILE, "ms3_readmsr() did not end with expected MS_ENDOFFILE");
+  REQUIRE (reccount > 1, "Test did not generate multiple records, continuation path not exercised");
+
+  ms3_readmsr (&rmsr, NULL, 0, 0);
+}
+
+/* Test that a v2 Blockette 500 (Timing Exception) time supplied via extra
+ * headers round-trips correctly when its fractional second is within 50
+ * microseconds of the next second boundary.
+ *
+ * This regression-tests the H4 fix in ms_timestr2btime(): previously the
+ * Y/D/H/M/S fields were derived from the time before the fsec/microsecond-
+ * offset rounding carry was applied, making the encoded BTIME exactly one
+ * second early whenever the fractional second was >= 0.99995s.
+ */
+TEST (write, msr3_writemseed_v2_btime_timecarry)
+{
+  MS3Record *msr = NULL;
+  MS3Record *rmsr = NULL;
+  int32_t sampledata[4] = {1, 2, 3, 4};
+  char gottime[64];
+  nstime_t expected;
+  nstime_t got;
+  uint32_t flags = MSF_FLUSHDATA | MSF_PACKVER2;
+  int64_t rv;
+  int rrv;
+
+  msr = msr3_init (msr);
+  REQUIRE (msr != NULL, "msr3_init() returned unexpected NULL");
+
+  strcpy (msr->sid, "FDSN:XX_TEST__B_H_Z");
+  msr->reclen = 512;
+  msr->pubversion = 1;
+  msr->starttime = ms_timestr2nstime ("2012-06-01T00:00:00Z");
+  msr->samprate = 1.0;
+  msr->encoding = DE_INT32;
+  msr->numsamples  = 4;
+  msr->samplecnt   = 4;
+  msr->datasamples = sampledata;
+  msr->sampletype  = 'i';
+
+  /* Exception time fraction (.999980s) is within the 50 microsecond carry band */
+  msr->extra = "{\"FDSN\":{\"Time\":{\"Exception\":["
+               "{\"Time\":\"2012-06-01T12:00:00.999980Z\"}"
+               "]}}}";
+  msr->extralength = (uint16_t)strlen (msr->extra);
+
+  rv = msr3_writemseed (msr, TESTFILE_BTIMECARRY_V2, 1, flags, 0);
+  REQUIRE (rv > 0, "msr3_writemseed() return unexpected value");
+
+  msr->extra = NULL;
+  msr->extralength = 0;
+  msr->datasamples = NULL;
+  msr3_free (&msr);
+
+  /* Read back and confirm the decoded Blockette 500 time matches the
+   * original exception time, which would catch an encoded BTIME that is
+   * exactly one second early. */
+  rrv = ms3_readmsr (&rmsr, TESTFILE_BTIMECARRY_V2, 0, 0);
+  CHECK (rrv == MS_NOERROR, "ms3_readmsr() did not return expected MS_NOERROR");
+  REQUIRE (rmsr != NULL, "ms3_readmsr() did not populate 'rmsr'");
+
+  rrv = mseh_get_string (rmsr, "/FDSN/Time/Exception/0/Time", gottime, sizeof (gottime));
+  CHECK (rrv == 0, "mseh_get_string() did not find decoded B500 time");
+
+  expected = ms_timestr2nstime ("2012-06-01T12:00:00.999980Z");
+  got = ms_timestr2nstime (gottime);
+
+  CHECK (got == expected, "Decoded Blockette 500 time does not match encoded time (BTIME time carry)");
+
+  ms3_readmsr (&rmsr, NULL, 0, 0);
 }
 
 /* Test writing miniSEED records to a file from a MS3TraceList and verify output

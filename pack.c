@@ -537,9 +537,12 @@ msr3_pack_next (MS3RecordPacker *packer, char **record, int32_t *reclen)
     /* Update start time if not first record */
     if (packer->recordcount > 0)
     {
-      nstime2fsec_usec_offset (packer->nextstarttime, &fsec, &usec_offset);
+      nstime_t second_nstime = nstime2fsec_usec_offset (packer->nextstarttime, &fsec, &usec_offset);
 
-      if (ms_nstime2time (packer->nextstarttime, &year, &day, &hour, &min, &sec, &nsec))
+      /* Use the (possibly carried) second-resolution time so Y/D/H/M/S stay
+       * consistent with fsec/usec_offset when rounding carries into the next second */
+      if (second_nstime == NSTERROR ||
+          ms_nstime2time (second_nstime, &year, &day, &hour, &min, &sec, NULL))
       {
         ms_log (2, "%s: Cannot convert record starttime: %" PRId64 "\n", packer->msr->sid,
                 packer->nextstarttime);
@@ -2339,12 +2342,14 @@ ms_timestr2btime (const char *timestr, uint8_t *btime, int8_t *usec_offset, cons
   if ((nstime = ms_timestr2nstime (timestr)) == NSTERROR)
     return NSTERROR;
 
-  if (ms_nstime2time (nstime, &year, &day, &hour, &min, &sec, NULL))
-    return NSTERROR;
-
   second_nstime = nstime2fsec_usec_offset (nstime, &fsec, &l_usec_offset);
 
   if (second_nstime == NSTERROR)
+    return NSTERROR;
+
+  /* Break down the (possibly carried) second-resolution time so Y/D/H/M/S stay
+   * consistent with fsec/usec_offset when rounding carries into the next second */
+  if (ms_nstime2time (second_nstime, &year, &day, &hour, &min, &sec, NULL))
     return NSTERROR;
 
   *((uint16_t *)(btime)) = HO2u (year, swapflag);
