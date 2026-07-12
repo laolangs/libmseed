@@ -555,7 +555,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     if (cp)
     {
       starttime = ms_timestr2nstime (cp);
-      if (starttime == NSTUNSET)
+      if (starttime == NSTERROR)
       {
         ms_log (2, "Cannot convert data selection start time (line %d): %s\n", linecount, cp);
         return -1;
@@ -572,7 +572,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     if (cp)
     {
       endtime = ms_timestr2nstime (cp);
-      if (endtime == NSTUNSET)
+      if (endtime == NSTERROR)
       {
         ms_log (2, "Cannot convert data selection end time (line %d): %s\n", linecount, cp);
         return -1;
