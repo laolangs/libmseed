@@ -66,11 +66,7 @@ extern int cmpfiles (char *fileA, char *fileB);
 #define TESTFILE_NSEC_V2    "testdata-nsec.mseed2"
 #define TESTFILE_OLDEN_V2   "testdata-olden.mseed2"
 #define TESTFILE_ODDRATE_V2 "testdata-oddrate.mseed2"
-#define TESTFILE_TIMECARRY_V2 "testdata-timecarry.mseed2"
-#define TESTFILE_BTIMECARRY_V2 "testdata-btimecarry.mseed2"
-#define TESTFILE_SAMPLECOUNT_V2 "testdata-samplecount.mseed2"
 #define TESTFILE_MSTLPACK_V2 "testdata-mstlpack.mseed2"
-#define TESTFILE_MSTLPACK_EXTRA_V2 "testdata-mstlpack-extra.mseed2"
 #define TESTFILE_FLUSHIDLE_V2 "testdata-flushidle.mseed2"
 
 #define TESTFILE_TEXT_V3    "testdata-text.mseed3"
@@ -90,6 +86,12 @@ extern int cmpfiles (char *fileA, char *fileB);
 
 #define TESTFILE_MSTLPACK_ROLLINGBUFFER "testdata-mstlpack-rollingbuffer.mseed"
 #define TESTFILE_MSTLPACK_NEXT_ROLLINGBUFFER "testdata-mstlpack-rollingbuffer-next.mseed"
+
+/* Write test output files.  No reference files needed for these tests. */
+#define TESTFILE_TIMECARRY_V2 "testdata-timecarry.mseed2"
+#define TESTFILE_BTIMECARRY_V2 "testdata-btimecarry.mseed2"
+#define TESTFILE_SAMPLECOUNT_V2 "testdata-samplecount.mseed2"
+#define TESTFILE_MSTLPACK_EXTRA_V2 "testdata-mstlpack-extra.mseed2"
 
 /* Test writing miniSEED records to a file for each supported encoding and
  * verifies the output against reference files.
