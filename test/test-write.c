@@ -70,6 +70,7 @@ extern int cmpfiles (char *fileA, char *fileB);
 #define TESTFILE_BTIMECARRY_V2 "testdata-btimecarry.mseed2"
 #define TESTFILE_SAMPLECOUNT_V2 "testdata-samplecount.mseed2"
 #define TESTFILE_MSTLPACK_V2 "testdata-mstlpack.mseed2"
+#define TESTFILE_MSTLPACK_EXTRA_V2 "testdata-mstlpack-extra.mseed2"
 #define TESTFILE_FLUSHIDLE_V2 "testdata-flushidle.mseed2"
 
 #define TESTFILE_TEXT_V3    "testdata-text.mseed3"
@@ -1113,6 +1114,126 @@ TEST (pack, mstl3_pack_next_v2)
          "Trace list packing v2 next mismatch");
 
   mstl3_free (&mstl, 1);
+}
+
+/* Test packing multiple segments with the generator-style interface while a
+ * caller-owned (not packer-owned) extra headers buffer is supplied to
+ * mstl3_pack_init().
+ *
+ * The extra headers buffer is documented as borrowed: it is added to every
+ * generated record but ownership stays with the caller.  Internally, each
+ * segment packed re-initializes an MS3Record template that temporarily
+ * references this borrowed buffer; that reference must never be freed by the
+ * packer.  A string literal is used here so any invalid free of it aborts
+ * immediately rather than silently corrupting the heap.  Two trace segments
+ * are packed so the template is reinitialized a second time, which is where
+ * a borrowed pointer could incorrectly be freed.
+ */
+TEST (pack, mstl3_pack_next_extra_headers_borrowed)
+{
+  MS3Record msr = MS3Record_INITIALIZER;
+  MS3TraceList *mstl = NULL;
+  MS3TraceSeg *seg = NULL;
+  MS3Record *rmsr = NULL;
+  FILE *ofp = NULL;
+  uint32_t flags = 0;
+  int32_t isinedata[SINE_DATA_SAMPLES];
+
+  MS3TraceListPacker *packer = NULL;
+  char *record = NULL;
+  int32_t reclen = 0;
+  int result = 0;
+  int recordcount = 0;
+  int64_t packedsamples = 0;
+  int rrv;
+  int checked;
+  uint64_t quality;
+
+  /* Create integer sine data set */
+  for (int idx = 0; idx < SINE_DATA_SAMPLES; idx++)
+  {
+    isinedata[idx] = (int32_t)(dsinedata[idx]);
+  }
+
+  mstl = mstl3_init (mstl);
+  REQUIRE (mstl != NULL, "mstl3_init() returned unexpected NULL");
+
+  /* Common record parameters */
+  msr.pubversion = 1;
+  msr.datasamples = isinedata;
+  msr.sampletype = 'i';
+
+  /* Add a H_H_Z trace */
+  strcpy (msr.sid, "FDSN:XX_TEST__H_H_Z");
+  msr.samprate = 100.0;
+  msr.starttime = ms_timestr2nstime ("2012-05-12T00:00:00.123456789Z");
+  msr.numsamples = SINE_DATA_SAMPLES;
+  msr.samplecnt = msr.numsamples;
+
+  seg = mstl3_addmsr (mstl, &msr, 0, 1, flags, NULL);
+  REQUIRE (seg != NULL, "mstl3_addmsr() returned unexpected NULL");
+
+  /* Add a B_H_Z trace, a second segment whose packing reinitializes the
+   * MS3Record template a second time */
+  strcpy (msr.sid, "FDSN:XX_TEST__B_H_Z");
+  msr.samprate = 40.0;
+  msr.starttime = ms_timestr2nstime ("2012-05-12T00:00:00.123456789Z");
+  msr.numsamples = SINE_DATA_SAMPLES;
+  msr.samplecnt = msr.numsamples;
+
+  seg = mstl3_addmsr (mstl, &msr, 0, 1, flags, NULL);
+  REQUIRE (seg != NULL, "mstl3_addmsr() returned unexpected NULL");
+
+  /* Open file for generated miniSEED records */
+  ofp = fopen (TESTFILE_MSTLPACK_EXTRA_V2, "wb");
+  REQUIRE (ofp != NULL, "Failed to open output file");
+
+  /* Initialize the packing context with a borrowed (caller-owned) extra
+   * headers buffer -- a string literal, not allocated by this library */
+  flags = MSF_FLUSHDATA | MSF_PACKVER2;
+  packer = mstl3_pack_init (mstl, 512, DE_STEIM1, flags, 0,
+                            "{\"FDSN\":{\"Time\":{\"Quality\":100}}}", 0);
+  REQUIRE (packer != NULL, "mstl3_pack_init() returned unexpected NULL");
+
+  /* Pack the records */
+  recordcount = 0;
+  while ((result = mstl3_pack_next (packer, 0, &record, &reclen)) == 1)
+  {
+    if (fwrite (record, reclen, 1, ofp) != 1)
+    {
+      ms_log (2, "Error writing to output file\n");
+      break;
+    }
+
+    recordcount++;
+  }
+
+  CHECK (result == 0, "mstl3_pack_next() did not finish cleanly packing multiple segments");
+
+  mstl3_pack_free (&packer, &packedsamples);
+  CHECK (packedsamples == SINE_DATA_SAMPLES + SINE_DATA_SAMPLES, "Packed samples mismatch");
+  REQUIRE (recordcount > 1, "Test did not generate records for multiple segments");
+
+  fclose (ofp);
+
+  mstl3_free (&mstl, 1);
+
+  /* Verify the extra headers survived intact in every record from both
+   * segments; corruption from a premature free of the borrowed buffer would
+   * surface here even where it did not abort outright. */
+  checked = 0;
+  while ((rrv = ms3_readmsr (&rmsr, TESTFILE_MSTLPACK_EXTRA_V2, 0, 0)) == MS_NOERROR)
+  {
+    CHECK (mseh_get_uint64 (rmsr, "/FDSN/Time/Quality", &quality) == 0,
+           "Extra headers missing or corrupted in packed record");
+    CHECK (quality == 100, "Extra header value corrupted in packed record");
+    checked++;
+  }
+
+  CHECK (rrv == MS_ENDOFFILE, "ms3_readmsr() did not end with expected MS_ENDOFFILE");
+  CHECK (checked == recordcount, "Did not verify extra headers for all packed records");
+
+  ms3_readmsr (&rmsr, NULL, 0, 0);
 }
 
 /* Test packing v3 miniSEED records from a MS3TraceList with the generator-sytle

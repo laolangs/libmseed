@@ -2438,6 +2438,9 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
         }
       }
 
+      /* Clear borrowed extra headers pointer so msr3_init() does not free it */
+      packer->msr_template.extra = NULL;
+
       /* Initialize MS3Record template from segment */
       msr3_init (&packer->msr_template);
 
