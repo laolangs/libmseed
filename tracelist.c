@@ -106,7 +106,7 @@ mstl3_free (MS3TraceList **ppmstl, int8_t freeprvtptr)
   MS3TraceSeg *seg = NULL;
   MS3TraceSeg *nextseg = NULL;
 
-  if (!ppmstl)
+  if (!ppmstl || !*ppmstl)
     return;
 
   /* Free any associated traces */
