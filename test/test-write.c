@@ -68,6 +68,7 @@ extern int cmpfiles (char *fileA, char *fileB);
 #define TESTFILE_ODDRATE_V2 "testdata-oddrate.mseed2"
 #define TESTFILE_TIMECARRY_V2 "testdata-timecarry.mseed2"
 #define TESTFILE_BTIMECARRY_V2 "testdata-btimecarry.mseed2"
+#define TESTFILE_SAMPLECOUNT_V2 "testdata-samplecount.mseed2"
 #define TESTFILE_MSTLPACK_V2 "testdata-mstlpack.mseed2"
 #define TESTFILE_FLUSHIDLE_V2 "testdata-flushidle.mseed2"
 
@@ -604,12 +605,11 @@ TEST (write, msr3_writemseed_oddrate)
  * Y/D/H/M/S fields must be derived from that carried time, not the raw,
  * uncarried start time.
  *
- * This regression-tests the H3 fix in msr3_pack_next(): previously the raw
- * time was used for continuation records, making them exactly one second
- * early whenever their start fraction fell in that band.  A small record
- * length is used to force many continuation records at a 1 Hz sample rate,
- * so every continuation record's start fraction repeats the initial,
- * in-carry-band fraction.
+ * A small record length is used to force many continuation records at a 1 Hz
+ * sample rate, so every continuation record's start fraction repeats the
+ * initial, in-carry-band fraction.  If a continuation record's Y/D/H/M/S were
+ * derived from the raw (uncarried) time it would be written exactly one second
+ * early.
  */
 TEST (write, msr3_writemseed_v2_continuation_timecarry)
 {
@@ -678,10 +678,10 @@ TEST (write, msr3_writemseed_v2_continuation_timecarry)
  * headers round-trips correctly when its fractional second is within 50
  * microseconds of the next second boundary.
  *
- * This regression-tests the H4 fix in ms_timestr2btime(): previously the
- * Y/D/H/M/S fields were derived from the time before the fsec/microsecond-
- * offset rounding carry was applied, making the encoded BTIME exactly one
- * second early whenever the fractional second was >= 0.99995s.
+ * The encoded BTIME's Y/D/H/M/S fields must be derived from the time after the
+ * fsec/microsecond-offset rounding carry is applied; otherwise the blockette
+ * time would be written exactly one second early whenever the fractional second
+ * is >= 0.99995s.
  */
 TEST (write, msr3_writemseed_v2_btime_timecarry)
 {
@@ -737,6 +737,71 @@ TEST (write, msr3_writemseed_v2_btime_timecarry)
   got = ms_timestr2nstime (gottime);
 
   CHECK (got == expected, "Decoded Blockette 500 time does not match encoded time (BTIME time carry)");
+
+  ms3_readmsr (&rmsr, NULL, 0, 0);
+}
+
+/* Test that a miniSEED v2 record with more samples than fit in the 16-bit FSDH
+ * sample-count field is split into multiple records rather than truncating the
+ * count.
+ *
+ * The v2 sample-count field is 16 bits, so no single record can represent more
+ * than UINT16_MAX samples regardless of record length.  A large text payload
+ * (one sample per byte) in a 128 KiB record makes this deterministic: 70000
+ * samples would fit in a single record by length but exceed the 16-bit count
+ * field, so the packer must emit multiple records with a correct total count.
+ */
+TEST (write, msr3_writemseed_v2_samplecount_overflow)
+{
+  MS3Record *msr = NULL;
+  MS3Record *rmsr = NULL;
+  const int64_t numsamples = 70000; /* > UINT16_MAX, fits in one 128 KiB record */
+  char *textdata_big = NULL;
+  int64_t total = 0;
+  int reccount = 0;
+  uint32_t flags = MSF_FLUSHDATA | MSF_PACKVER2;
+  int64_t rv;
+  int rrv;
+
+  textdata_big = (char *)malloc (numsamples);
+  REQUIRE (textdata_big != NULL, "Failed to allocate test text buffer");
+  memset (textdata_big, 'A', numsamples);
+
+  msr = msr3_init (msr);
+  REQUIRE (msr != NULL, "msr3_init() returned unexpected NULL");
+
+  strcpy (msr->sid, "FDSN:XX_TEST__L_O_G");
+  msr->reclen = 131072; /* < MAXRECLENv2, large enough to hold all samples at once */
+  msr->pubversion = 1;
+  msr->starttime = ms_timestr2nstime ("2012-01-01T00:00:00Z");
+  msr->samprate = 0;
+  msr->encoding = DE_TEXT;
+  msr->numsamples  = numsamples;
+  msr->samplecnt   = numsamples;
+  msr->datasamples = textdata_big;
+  msr->sampletype  = 't';
+
+  rv = msr3_writemseed (msr, TESTFILE_SAMPLECOUNT_V2, 1, flags, 0);
+  REQUIRE (rv > 0, "msr3_writemseed() return unexpected value");
+
+  msr->datasamples = NULL;
+  msr3_free (&msr);
+  free (textdata_big);
+
+  /* Read back every record; the total sample count must be preserved and no
+   * single record may exceed the 16-bit field. */
+  while ((rrv = ms3_readmsr (&rmsr, TESTFILE_SAMPLECOUNT_V2, 0, 0)) == MS_NOERROR)
+  {
+    CHECK (rmsr->samplecnt <= UINT16_MAX,
+           "Record sample count exceeds the 16-bit v2 FSDH field");
+
+    total += rmsr->samplecnt;
+    reccount++;
+  }
+
+  CHECK (rrv == MS_ENDOFFILE, "ms3_readmsr() did not end with expected MS_ENDOFFILE");
+  CHECK (total == numsamples, "Total sample count across records does not match input");
+  REQUIRE (reccount > 1, "Test did not split into multiple records, overflow path not exercised");
 
   ms3_readmsr (&rmsr, NULL, 0, 0);
 }

@@ -467,8 +467,13 @@ msr3_pack_next (MS3RecordPacker *packer, char **record, int32_t *reclen)
   /* Pack data samples */
   packoffset_bytes = packer->packed_samples * packer->samplesize;
 
+  /* miniSEED 2 FSDH sample count is 16-bit; cap so excess spills to next records */
+  uint64_t samples_to_pack = remaining_samples;
+  if (packer->formatversion == 2 && samples_to_pack > UINT16_MAX)
+    samples_to_pack = UINT16_MAX;
+
   samples_packed = msr_pack_data (
-      packer->encoded, (uint8_t *)packer->msr->datasamples + packoffset_bytes, remaining_samples,
+      packer->encoded, (uint8_t *)packer->msr->datasamples + packoffset_bytes, samples_to_pack,
       packer->maxdatabytes, packer->msr->sampletype, packer->encoding, packer->swapflag,
       &datalength, packer->msr->sid, packer->verbose);
 
