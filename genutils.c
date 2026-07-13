@@ -1498,6 +1498,13 @@ ms_timestr2nstime (const char *timestr)
       return NSTERROR;
     }
 
+    /* Guard against int64 nanosecond overflow before scaling to nanoseconds */
+    if (sec > INT64_MAX / NSTMODULUS || sec < INT64_MIN / NSTMODULUS)
+    {
+      ms_log (2, "Epoch value (%s) is beyond the representable nstime range\n", timestr);
+      return NSTERROR;
+    }
+
     /* Convert seconds and fractional seconds to nanoseconds, return combination */
     nstime = MS_EPOCH2NSTIME (sec);
 
