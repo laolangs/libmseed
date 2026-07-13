@@ -1177,7 +1177,8 @@ ms_nstime2timestr_n (nstime_t nstime, char *timestr, size_t timestrsize, ms_time
       break;
     case UNIXEPOCH:
       expected = -1;
-      printed = snprintf (timestr, timestrsize, "%" PRId64 ".%06d", rawisec, rawnanosec / 1000);
+      printed = snprintf (timestr, timestrsize, "%s%" PRId64 ".%06d",
+                          (nstime < 0 && rawisec == 0) ? "-" : "", rawisec, rawnanosec / 1000);
       break;
     case NANOSECONDEPOCH:
       expected = -1;
@@ -1218,7 +1219,8 @@ ms_nstime2timestr_n (nstime_t nstime, char *timestr, size_t timestrsize, ms_time
       break;
     case UNIXEPOCH:
       expected = -1;
-      printed = snprintf (timestr, timestrsize, "%" PRId64 ".%09d", rawisec, rawnanosec);
+      printed = snprintf (timestr, timestrsize, "%s%" PRId64 ".%09d",
+                          (nstime < 0 && rawisec == 0) ? "-" : "", rawisec, rawnanosec);
       break;
     case NANOSECONDEPOCH:
       expected = -1;
@@ -1501,10 +1503,11 @@ ms_timestr2nstime (const char *timestr)
 
     if (fsec != 0.0)
     {
-      if (nstime >= 0)
-        nstime += (int)(fsec * 1000000000.0 + 0.5);
-      else
+      /* Fraction follows the sign of the value (e.g. "-0.5") */
+      if (sec < 0 || timestr[0] == '-')
         nstime -= (int)(fsec * 1000000000.0 + 0.5);
+      else
+        nstime += (int)(fsec * 1000000000.0 + 0.5);
     }
 
     return nstime;
