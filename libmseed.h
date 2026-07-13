@@ -785,11 +785,12 @@ typedef struct LMIO
   void *handle;      //!< Primary IO handle, either file or URL
   void *handle2;     //!< Secondary IO handle for URL
   int still_running; //!< Fetch status flag for URL transmissions
+  int urlfail;       //!< Transfer failure flag for URL transmissions
 } LMIO;
 
 /** @def LMIO_INITIALIZER
     @brief Initialializer for the internal stream handle ::LMIO */
-#define LMIO_INITIALIZER {.type = LMIO_NULL, .handle = NULL, .handle2 = NULL, .still_running = 0}
+#define LMIO_INITIALIZER {.type = LMIO_NULL, .handle = NULL, .handle2 = NULL, .still_running = 0, .urlfail = 0}
 
 /** @brief State container for reading miniSEED records from files or URLs.
 

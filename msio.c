@@ -387,6 +387,13 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
       ms_log (2, "Cannot open %s: response code %ld\n", path, response_code);
       goto onerror;
     }
+
+    /* Detect transfer-level failures with no HTTP status, e.g. connection errors */
+    if (io->urlfail)
+    {
+      ms_log (2, "Cannot open %s: transfer failed\n", path);
+      goto onerror;
+    }
 #endif /* defined(LIBMSEED_URL) */
   }
   else
@@ -527,6 +534,10 @@ msio_fread (LMIO *io, void *buffer, size_t size)
     int maxfd = -1;
     int rc;
 
+    /* Report an error if a previous transfer failure was detected */
+    if (io->urlfail)
+      return -1;
+
     if (!io->still_running)
       return 0;
 
@@ -594,6 +605,28 @@ msio_fread (LMIO *io, void *buffer, size_t size)
 
     read = size - rcp.size;
 
+    /* When the transfer is no longer running, check its completion status.
+     * A non-OK result means the transfer failed (e.g. connection reset)
+     * rather than reaching a clean end of stream. */
+    if (!io->still_running)
+    {
+      CURLMsg *msg;
+      int msgs_left;
+
+      while ((msg = curl_multi_info_read (io->handle2, &msgs_left)))
+      {
+        if (msg->msg == CURLMSG_DONE && msg->data.result != CURLE_OK)
+        {
+          ms_log (2, "Error transferring data: %s\n", curl_easy_strerror (msg->data.result));
+          io->urlfail = 1;
+        }
+      }
+
+      /* Report an error if no data were received before the failure */
+      if (io->urlfail && read == 0)
+        return -1;
+    }
+
 #endif /* defined(LIBMSEED_URL) */
   }
 
@@ -627,6 +660,10 @@ msio_feof (LMIO *io)
     ms_log (2, "URL support not included in library\n");
     return -1;
 #else
+    /* A failed transfer is not a clean end of stream */
+    if (io->urlfail)
+      return 0;
+
     /* The still_running flag is only changed by curl_multi_perform()
      * and indicates current "transfers in progress".  Presumably no data
      * are in internal libcurl buffers either. */
