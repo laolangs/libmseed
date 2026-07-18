@@ -1001,9 +1001,9 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
             msr->sid, *pMS2FSDH_NUMBLOCKETTES (record), blkt_count);
   }
 
-  /* Calculate start time */
+  /* Calculate start time, rejecting an unset (year 0) or invalid time */
   msr->starttime = ms_btime2nstime ((uint8_t *)pMS2FSDH_YEAR (record), msr->swapflag);
-  if (msr->starttime == NSTERROR)
+  if (msr->starttime == NSTERROR || msr->starttime == NSTUNSET)
   {
     ms_log (2, "%s: Cannot convert start time to internal time stamp\n", msr->sid);
     return MS_GENERROR;
