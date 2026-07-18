@@ -2,6 +2,9 @@
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
   rolls over, so continuation records and BTIME-encoded blockette times are no
   longer written one second early.
+  - Fix cumulative start-time rounding drift when repeatedly packing partial
+    trace segments by projecting new start times using the apparent rate
+    implied by segment start and end times.
   - Fix invalid free of a caller-owned extra-headers buffer when packing
     multiple trace list segments with mstl3_pack_next().
   - Prevent overflow on sample-count when writing miniSEED v2.

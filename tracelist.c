@@ -39,6 +39,7 @@ static int lm_remove_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *s
                               int8_t freeprvtptr);
 static uint32_t lm_lcg_r (uint64_t *state);
 static uint8_t lm_random_height (uint8_t maximum, uint64_t *state);
+static nstime_t lm_packed_starttime (const MS3TraceSeg *seg, int64_t packedsamples);
 
 /* Test if two sample rates are similar using either specified tolerance (if positive) or default
  * tolerance */
@@ -2060,22 +2061,17 @@ _mstl3_pack_callback (MS3TraceList *mstl, void (*record_handler) (char *, int, v
  * the ::MSF_FLUSHDATA flag to pack all data in the trace list.
  *
  * <b>Use as a rolling buffer to generate data records:</b>
- * The behavior of adjusting the trace list as data are packed is
- * intended to allow using a ::MS3TraceList as an intermediate
- * collection of data buffers to generate data records from an
- * arbitrarily large data source, e.g. continuous data.  In this
- * pattern, data are added to a ::MS3TraceList and mstl3_pack() is
- * called repeatedly.  Data records are only produced if a complete
- * record can be generated, which often leaves small amounts of data
- * in each segment buffer.  On completion or shutdown the caller
- * usually makes a final call to mst3_pack() with the ::MSF_FLUSHDATA
- * flag set to flush all data from the buffers.  Implementing finer
- * control of when data records are generated, such as a time tolerance,
- * can be done using mstraceseg3_pack() directly.
+ * A ::MS3TraceList can be used as an intermediate collection of data
+ * buffers to generate data records from an arbitrarily large data
+ * source, e.g. continuous data. For this pattern use mstl3_pack_init()
+ * and mstl3_pack_next(), instead of mstl3_pack(). See the
+ * lm_pack_rollingbuffer.c example.  If using this function for a
+ * continuous data source, you must set the ::MSF_FLUSHDATA flag on a
+ * final call to pack all data in the buffer.
  *
  * As each record is filled and finished they are passed to @p
- * record_handler() which should expect 1) a @c char* to the record,
- * 2) the length of the record and 3) a pointer supplied by the
+ * record_handler() callback which should expect 1) a @c char* to the
+ * record, 2) the length of the record and 3) a pointer supplied by the
  * original caller containing optional private data (@p handlerdata).
  * It is the responsibility of @p record_handler() to process the
  * record, the memory will be re-used or freed when @p
@@ -2089,6 +2085,11 @@ _mstl3_pack_callback (MS3TraceList *mstl, void (*record_handler) (char *, int, v
  * If @p extra is not NULL it is expected to contain extraheaders, a
  * string containing (compact) JSON, that will be added to each output
  * record.
+ *
+ * When packed data are removed from a segment, the new segment start
+ * time is projected using the apparent sample rate implied by the
+ * segment start and end times, falling back to the nominal rate when
+ * they are inconsistent.
  *
  * @param[in] mstl ::MS3TraceList containing data to pack
  * @param[in] record_handler() Callback function called for each record
@@ -2109,6 +2110,8 @@ _mstl3_pack_callback (MS3TraceList *mstl, void (*record_handler) (char *, int, v
  *
  * @ref MessageOnError - this function logs a message on error
  *
+ * @see mstl3_pack_init()
+ * @see mstl3_pack_next()
  * @see mstl3_pack_segment()
  * @see msr3_pack()
  ***************************************************************************/
@@ -2120,6 +2123,33 @@ mstl3_pack (MS3TraceList *mstl, void (*record_handler) (char *, int, void *), vo
   return _mstl3_pack_callback (mstl, record_handler, handlerdata, reclen, encoding, packedsamples,
                                flags, verbose, extra, 0);
 }
+
+/***************************************************************************
+ * Calculate a new segment start time after packed samples are removed
+ * from the front of the segment.
+ *
+ * The start time is projected using the apparent sample period implied
+ * by the segment start and end times, which distributes small timing
+ * skew proportionally and avoids accumulating rounding drift across
+ * repeated packing.  If the apparent rate is not within tolerance of
+ * the nominal rate, the nominal rate is used instead.
+ ***************************************************************************/
+static nstime_t
+lm_packed_starttime (const MS3TraceSeg *seg, int64_t packedsamples)
+{
+  if (seg->numsamples >= 2 && seg->endtime > seg->starttime && seg->samprate != 0.0)
+  {
+    double apparent_period =
+        (double)(seg->endtime - seg->starttime) / (double)(seg->numsamples - 1);
+    double nominal_period = (seg->samprate > 0.0) ? (double)NSTMODULUS / seg->samprate
+                                                  : (double)NSTMODULUS * -seg->samprate;
+
+    if (MS_ISRATETOLERABLE (apparent_period, nominal_period))
+      return seg->starttime + (nstime_t)llround ((double)packedsamples * apparent_period);
+  }
+
+  return ms_sampletime (seg->starttime, packedsamples, seg->samprate);
+} /* End of lm_packed_starttime() */
 
 /** ************************************************************************
  * @copydoc mstl3_pack()
@@ -2146,6 +2176,13 @@ mstl3_pack_ppupdate_flushidle (MS3TraceList *mstl, void (*record_handler) (char 
  *
  * Create and initialize an opaque ::MS3TraceListPacker context for generating
  * miniSEED records one at a time from an ::MS3TraceList.
+ *
+ * <b>Use as a rolling buffer to generate data records:</b>
+ * A ::MS3TraceList can be used as an intermediate collection of data
+ * buffers to generate data records from an arbitrarily large or continuous
+ * data source. The final call should be made with the ::MSF_FLUSHDATA flag
+ * set to flush all data from the buffers. See the lm_pack_rollingbuffer.c
+ * example.
  *
  * The packing state should be freed with mstl3_pack_free() when done.
  *
@@ -2292,12 +2329,12 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       /* If MSF_MAINTAINMSTL not set, update segment data buffer: remove packed samples */
       if ((packer->flags & MSF_MAINTAINMSTL) == 0 && seg_total_packed > 0 && packer->current_seg)
       {
-        /* Calculate new start time */
+        /* Calculate new start time, shortcut when all samples have been packed */
         if (seg_total_packed == packer->current_seg->numsamples)
           packer->current_seg->starttime = packer->current_seg->endtime;
         else
-          packer->current_seg->starttime = ms_sampletime (
-              packer->current_seg->starttime, seg_total_packed, packer->current_seg->samprate);
+          packer->current_seg->starttime =
+              lm_packed_starttime (packer->current_seg, seg_total_packed);
 
         samplesize = ms_samplesize (packer->current_seg->sampletype);
         if (!samplesize)
@@ -2576,6 +2613,11 @@ mstl3_pack_free (MS3TraceListPacker **packer, int64_t *packedsamples)
  * ::MSF_MAINTAINMSTL is specified a caller would also normally set
  * the ::MSF_FLUSHDATA flag to pack all data in the trace list.
  *
+ * When packed data are removed from a segment, the new segment start
+ * time is projected using the apparent sample rate implied by the
+ * segment start and end times, falling back to the nominal rate when
+ * they are inconsistent.
+ *
  * As each record is filled and finished they are passed to @p
  * record_handler() which should expect 1) a @c char* to the record,
  * 2) the length of the record and 3) a pointer supplied by the
@@ -2717,7 +2759,7 @@ mstl3_pack_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg,
     if (segpackedsamples == seg->numsamples)
       seg->starttime = seg->endtime;
     else
-      seg->starttime = ms_sampletime (seg->starttime, segpackedsamples, seg->samprate);
+      seg->starttime = lm_packed_starttime (seg, segpackedsamples);
 
     if (!(samplesize = ms_samplesize (seg->sampletype)))
     {
