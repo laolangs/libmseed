@@ -39,6 +39,8 @@
     instead of casting it to an nstime_t and returning a garbage time.
   - Fix ms_sampletime() to reject a negative sample offset instead of
     silently returning the input time unchanged.
+  - Write Blockette 100 sample rate as Hz via msr3_sampratehz() instead of raw
+    msr->samprate, so period-notation rates are not stored as negative Hz.
   - Reject miniSEED v3 records with a non-finite fixed-header sample rate,
     and ignore an invalid Blockette 100 sample rate instead of applying it.
   - Fix Blockette 500 microsecond precision from being added to an unset or

@@ -1384,7 +1384,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
 
     *pMS2B100_TYPE (record + written) = HO2u (100, swapflag);
     *pMS2B100_NEXT (record + written) = 0;
-    *pMS2B100_SAMPRATE (record + written) = HO4f ((float)msr->samprate, swapflag);
+    *pMS2B100_SAMPRATE (record + written) = HO4f ((float)sampratehz, swapflag);
     *pMS2B100_FLAGS (record + written) = 0;
     memset (pMS2B100_RESERVED (record + written), 0, 3);
 
