@@ -1,5 +1,4 @@
 2026.200:
-  - Fix FILE* leak on error paths in ms_readleapsecondfile().
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
   rolls over, so continuation records and BTIME-encoded blockette times are no
   longer written one second early.
@@ -26,6 +25,7 @@
     silently treating them as open-ended selections.
   - Fix sign loss for negative sub-second epoch times (e.g. -0.5) when printing
     and parsing UNIXEPOCH/NANOSECONDEPOCH time strings.
+  - Fix FILE* leak on error paths in ms_readleapsecondfile().
   - Reject epoch-time strings beyond the representable nstime range.
   - Reject epoch-time strings whose fractional seconds overflow the nstime
     range even though the integer seconds are in range.
@@ -55,6 +55,10 @@
     silently packing v2/v3 records dated 1902-001T00:00:00.
   - Fix ms_nstime2timestr_n() detection of a truncated output buffer.
   - Warn when packing miniSEED 2 with a start year outside 1900-2100.
+  - Fix GEOSCOPE 24-bit decoding to assemble the 3-byte sample using the
+    record's actual byte order instead of a host-order union read-back, which
+    corrupted amplitudes for little-endian-declared GEOSCOPE24 payloads.
+    This is only for completeness, such data may not exist.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.

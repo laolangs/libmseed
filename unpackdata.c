@@ -630,16 +630,9 @@ msr_decode_geoscope (char *input, uint64_t samplecount, float *output, uint64_t 
   int32_t mantissa;  /* mantissa from SEED data */
   int32_t gainrange; /* gain range factor */
   int32_t exponent;  /* total exponent */
-  int32_t k;
   uint64_t exp2val;
   int16_t sint;
   double dsample = 0.0;
-
-  union
-  {
-    uint8_t b[4];
-    uint32_t i;
-  } sample32;
 
   if (samplecount == 0)
     return 0;
@@ -659,15 +652,16 @@ msr_decode_geoscope (char *input, uint64_t samplecount, float *output, uint64_t 
     switch (encoding)
     {
     case DE_GEOSCOPE24:
-      sample32.i = 0;
-      if (swapflag)
-        for (k = 0; k < 3; k++)
-          sample32.b[2 - k] = input[k];
+      /* Assemble the 24-bit sample explicitly by byte position, independent
+       * of host byte order, using the record's actual byte order */
+      if (ms_bigendianhost () ^ (swapflag != 0))
+        mantissa = ((uint32_t)(uint8_t)input[0] << 16) |
+                   ((uint32_t)(uint8_t)input[1] << 8) |
+                   (uint32_t)(uint8_t)input[2];
       else
-        for (k = 0; k < 3; k++)
-          sample32.b[1 + k] = input[k];
-
-      mantissa = sample32.i;
+        mantissa = ((uint32_t)(uint8_t)input[2] << 16) |
+                   ((uint32_t)(uint8_t)input[1] << 8) |
+                   (uint32_t)(uint8_t)input[0];
 
       /* Take 2's complement for mantissa for overflow */
       if ((unsigned long)mantissa > MAX24)
