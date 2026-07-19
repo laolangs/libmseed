@@ -48,7 +48,7 @@ msr_decode_int16 (int16_t *input, uint64_t samplecount, int32_t *output, uint64_
                   int swapflag)
 {
   int16_t sample;
-  uint32_t idx;
+  uint64_t idx;
 
   if (samplecount == 0)
     return 0;
@@ -84,7 +84,7 @@ msr_decode_int32 (int32_t *input, uint64_t samplecount, int32_t *output, uint64_
                   int swapflag)
 {
   int32_t sample;
-  uint32_t idx;
+  uint64_t idx;
 
   if (samplecount == 0)
     return 0;
@@ -120,7 +120,7 @@ msr_decode_float32 (float *input, uint64_t samplecount, float *output, uint64_t 
                     int swapflag)
 {
   float sample;
-  uint32_t idx;
+  uint64_t idx;
 
   if (samplecount == 0)
     return 0;
@@ -156,7 +156,7 @@ msr_decode_float64 (double *input, uint64_t samplecount, double *output, uint64_
                     int swapflag)
 {
   double sample;
-  uint32_t idx;
+  uint64_t idx;
 
   if (samplecount == 0)
     return 0;
@@ -626,7 +626,7 @@ int64_t
 msr_decode_geoscope (char *input, uint64_t samplecount, float *output, uint64_t outputlength,
                      int encoding, const char *srcname, int swapflag)
 {
-  uint32_t idx = 0;
+  uint64_t idx = 0;
   int32_t mantissa;  /* mantissa from SEED data */
   int32_t gainrange; /* gain range factor */
   int32_t exponent;  /* total exponent */
@@ -655,12 +655,10 @@ msr_decode_geoscope (char *input, uint64_t samplecount, float *output, uint64_t 
       /* Assemble the 24-bit sample explicitly by byte position, independent
        * of host byte order, using the record's actual byte order */
       if (ms_bigendianhost () ^ (swapflag != 0))
-        mantissa = ((uint32_t)(uint8_t)input[0] << 16) |
-                   ((uint32_t)(uint8_t)input[1] << 8) |
+        mantissa = ((uint32_t)(uint8_t)input[0] << 16) | ((uint32_t)(uint8_t)input[1] << 8) |
                    (uint32_t)(uint8_t)input[2];
       else
-        mantissa = ((uint32_t)(uint8_t)input[2] << 16) |
-                   ((uint32_t)(uint8_t)input[1] << 8) |
+        mantissa = ((uint32_t)(uint8_t)input[2] << 16) | ((uint32_t)(uint8_t)input[1] << 8) |
                    (uint32_t)(uint8_t)input[0];
 
       /* Take 2's complement for mantissa for overflow */
@@ -773,7 +771,7 @@ int64_t
 msr_decode_cdsn (int16_t *input, uint64_t samplecount, int32_t *output, uint64_t outputlength,
                  int swapflag)
 {
-  uint32_t idx = 0;
+  uint64_t idx = 0;
   int32_t mantissa;  /* mantissa */
   int32_t gainrange; /* gain range factor */
   int32_t mult = -1; /* multiplier for gain range */
@@ -862,7 +860,7 @@ int64_t
 msr_decode_sro (int16_t *input, uint64_t samplecount, int32_t *output, uint64_t outputlength,
                 const char *srcname, int swapflag)
 {
-  uint32_t idx = 0;
+  uint64_t idx = 0;
   int32_t mantissa;   /* mantissa */
   int32_t gainrange;  /* gain range factor */
   int32_t add2gr;     /* added to gainrage factor */
@@ -930,7 +928,7 @@ int64_t
 msr_decode_dwwssn (int16_t *input, uint64_t samplecount, int32_t *output, uint64_t outputlength,
                    int swapflag)
 {
-  uint32_t idx = 0;
+  uint64_t idx = 0;
   int32_t sample;
   uint16_t sint;
 
