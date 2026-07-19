@@ -362,7 +362,9 @@ mseh_get_ptr_r (const MS3Record *msr, const char *ptr, void *value, char type, u
     if (value)
       *((uint64_t *)value) = unsafe_yyjson_get_uint (extravalue);
   }
-  else if (type == 'i' && yyjson_is_int (extravalue))
+  else if (type == 'i' && yyjson_is_int (extravalue) &&
+           (yyjson_is_sint (extravalue) ||
+            unsafe_yyjson_get_uint (extravalue) <= INT64_MAX))
   {
     if (value)
       *((int64_t *)value) = unsafe_yyjson_get_sint (extravalue);

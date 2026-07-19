@@ -50,6 +50,9 @@
   - Reject epoch-time strings beyond the representable nstime range.
   - Reject epoch-time strings whose fractional seconds overflow the nstime
     range even though the integer seconds are in range.
+  - Fix mseh_get_ptr_r() returning a bit-reinterpreted negative value for type
+    'i' requests on extra header integers that are unsigned and out of range
+    for int64_t, instead of the wrong-type indicator.
   - Fix out-of-bounds reads on truncated Blockette 2000 in ms_parse_raw2().
   - Detect failed URL transfers instead of reporting them as end-of-file.
   - Document that ISO month-day time strings conform to the RFC 3339 profile.
