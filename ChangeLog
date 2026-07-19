@@ -17,6 +17,8 @@
     as an exact match instead of falling back to the default tolerance, and warn
     and use the default when a time or sample rate tolerance callback returns a
     negative value.
+  - Reject selection time windows whose start is later than end in
+    ms3_addselect().
   - Update MS3TraceID.earliest/latest after packing consumes or removes trace
     segment data so they no longer report stale extents.
   - Fix selection file parsing to reject invalid start/end times instead of

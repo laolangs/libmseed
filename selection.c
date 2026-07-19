@@ -166,7 +166,8 @@ msr3_matchselect (const MS3Selections *selections, const MS3Record *msr,
  * The @p sidpattern may contain globbing characters.
  *
  * The @p starttime and @p endtime may be set to ::NSTUNSET to denote
- * "open" times.
+ * "open" times.  If both are set, @p starttime must not be later than
+ * @p endtime.
  *
  * The @p pubversion may be set to 0 to match any publication
  * version.
@@ -191,6 +192,15 @@ ms3_addselect (MS3Selections **ppselections, const char *sidpattern, nstime_t st
   if (!ppselections || !sidpattern)
   {
     ms_log (2, "%s(): Required input not defined: 'ppselections' or 'sidpattern'\n", __func__);
+    return -1;
+  }
+
+  /* Reject inverted windows; NSTUNSET/NSTERROR remain open-ended sentinels */
+  if (starttime != NSTUNSET && starttime != NSTERROR &&
+      endtime != NSTUNSET && endtime != NSTERROR &&
+      starttime > endtime)
+  {
+    ms_log (2, "Selection start time is later than end time\n");
     return -1;
   }
 
