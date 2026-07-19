@@ -56,6 +56,7 @@ struct header_callback_parameters
 {
   int64_t *startoffset;
   int64_t *endoffset;
+  int range_honored;
 };
 
 /*********************************************************************
@@ -153,6 +154,8 @@ header_callback (char *buffer, size_t size, size_t num, void *userdata)
 
     if (hcp->endoffset && enddigits)
       *hcp->endoffset = (int64_t)strtoull (endstr, NULL, 10);
+
+    hcp->range_honored = 1;
   }
 
   return size;
@@ -207,6 +210,7 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
 #else
     long response_code;
     struct header_callback_parameters hcp;
+    int range_requested = 0;
 
     io->type = LMIO_URL;
     io->handle2 = NULL;
@@ -317,6 +321,8 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
       char endstr[21] = {0};
       char rangestr[42];
 
+      range_requested = 1;
+
       /* Build Range header value.
        * If start is undefined set it to zero if end is defined. */
       if (startoffset && *startoffset > 0)
@@ -341,6 +347,7 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     {
       hcp.startoffset = startoffset;
       hcp.endoffset = endoffset;
+      hcp.range_honored = 0;
 
       /* Configure header callback */
       if (curl_easy_setopt (io->handle, CURLOPT_HEADERFUNCTION, header_callback) != CURLE_OK)
@@ -394,6 +401,12 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
       ms_log (2, "Cannot open %s: transfer failed\n", path);
       goto onerror;
     }
+
+    /* If a byte range was requested but the server did not honor it (no
+     * Content-Range in the response), the full body was returned starting
+     * at offset 0.  Reset the start offset so the stream is labeled correctly. */
+    if (range_requested && !hcp.range_honored && startoffset)
+      *startoffset = 0;
 #endif /* defined(LIBMSEED_URL) */
   }
   else

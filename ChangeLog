@@ -21,6 +21,9 @@
   - Fix possible infinite loop in msio_fread() by clearing the curl pause flag
     before unpausing, since curl_easy_pause() may synchronously invoke the
     write callback and re-pause before the flag is cleared.
+  - Reset the requested start offset when an HTTP server ignores a byte Range
+    request and returns the full body, so stream and record offsets are not
+    mislabeled as starting at the unhonored offset.
   - Fix mstl3_addmsr() to honor a sample rate tolerance callback returning 0.0
     as an exact match instead of falling back to the default tolerance, and warn
     and use the default when a time or sample rate tolerance callback returns a
