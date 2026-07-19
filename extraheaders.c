@@ -711,7 +711,7 @@ mseh_add_event_detection_r (MS3Record *msr, const char *ptr, MSEHEventDetection 
     yyjson_mut_set_str (&units, eventdetection->units);
     yyjson_mut_obj_add (&entry, &units_key, &units);
   }
-  if (eventdetection->onsettime != NSTUNSET)
+  if (eventdetection->onsettime != NSTUNSET && eventdetection->onsettime != NSTERROR)
   {
     if (ms_nstime2timestr_n (eventdetection->onsettime, timestring, sizeof (timestring),
                              ISOMONTHDAY_Z, NANO_MICRO_NONE))
@@ -825,7 +825,7 @@ mseh_add_calibration_r (MS3Record *msr, const char *ptr, MSEHCalibration *calibr
     yyjson_mut_set_str (&type, calibration->type);
     yyjson_mut_obj_add (&entry, &type_key, &type);
   }
-  if (calibration->begintime != NSTUNSET)
+  if (calibration->begintime != NSTUNSET && calibration->begintime != NSTERROR)
   {
     if (ms_nstime2timestr_n (calibration->begintime, beginstring, sizeof (beginstring),
                              ISOMONTHDAY_Z, NANO_MICRO_NONE))
@@ -841,7 +841,7 @@ mseh_add_calibration_r (MS3Record *msr, const char *ptr, MSEHCalibration *calibr
       return MS_GENERROR;
     }
   }
-  if (calibration->endtime != NSTUNSET)
+  if (calibration->endtime != NSTUNSET && calibration->endtime != NSTERROR)
   {
     if (ms_nstime2timestr_n (calibration->endtime, endstring, sizeof (endstring), ISOMONTHDAY_Z,
                              NANO_MICRO_NONE))
@@ -1001,7 +1001,7 @@ mseh_add_timing_exception_r (MS3Record *msr, const char *ptr, MSEHTimingExceptio
   yyjson_mut_set_obj (&entry);
 
   /* Add elements to new object */
-  if (exception->time != NSTUNSET)
+  if (exception->time != NSTUNSET && exception->time != NSTERROR)
   {
     if (ms_nstime2timestr_n (exception->time, timestring, sizeof (timestring), ISOMONTHDAY_Z,
                              NANO_MICRO_NONE))
@@ -1097,7 +1097,7 @@ mseh_add_recenter_r (MS3Record *msr, const char *ptr, MSEHRecenter *recenter,
     yyjson_mut_set_str (&type, recenter->type);
     yyjson_mut_obj_add (&entry, &type_key, &type);
   }
-  if (recenter->begintime != NSTUNSET)
+  if (recenter->begintime != NSTUNSET && recenter->begintime != NSTERROR)
   {
     if (ms_nstime2timestr_n (recenter->begintime, beginstring, sizeof (beginstring), ISOMONTHDAY_Z,
                              NANO_MICRO_NONE))
@@ -1112,7 +1112,7 @@ mseh_add_recenter_r (MS3Record *msr, const char *ptr, MSEHRecenter *recenter,
       return MS_GENERROR;
     }
   }
-  if (recenter->endtime != NSTUNSET)
+  if (recenter->endtime != NSTUNSET && recenter->endtime != NSTERROR)
   {
     if (ms_nstime2timestr_n (recenter->endtime, endstring, sizeof (endstring), ISOMONTHDAY_Z,
                              NANO_MICRO_NONE))

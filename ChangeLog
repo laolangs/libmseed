@@ -31,6 +31,10 @@
     instead of casting it to an nstime_t and returning a garbage time.
   - Reject miniSEED v3 records with a non-finite fixed-header sample rate,
     and ignore an invalid Blockette 100 sample rate instead of applying it.
+  - Fix Blockette 500 microsecond precision from being added to an unset or
+    invalid decoded time, which fabricated a timing-exception time. Also stop
+    invalid blockette times from being written to extra headers as the
+    literal string "ERROR".
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.

@@ -207,8 +207,7 @@ msr3_unpack_mseed3 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
 
   if (msr->samprate != 0.0 && !isnormal (msr->samprate))
   {
-    ms_log (2, "%.*s: Invalid sample rate: %g\n", sidlength, pMS3FSDH_SID (record),
-            msr->samprate);
+    ms_log (2, "%.*s: Invalid sample rate: %g\n", sidlength, pMS3FSDH_SID (record), msr->samprate);
     return MS_GENERROR;
   }
 
@@ -471,7 +470,8 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
      * must be within the record buffer before ms2_blktlen() reads it */
     if (blkt_type == 2000 && (blkt_offset + 6) > reclen)
     {
-      ms_log (2, "%s: Blockette 2000 length field extends beyond record size, truncated?\n", msr->sid);
+      ms_log (2, "%s: Blockette 2000 length field extends beyond record size, truncated?\n",
+              msr->sid);
       break;
     }
 
@@ -860,8 +860,9 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       exception.time =
           ms_btime2nstime ((uint8_t *)pMS2B500_YEAR (record + blkt_offset), msr->swapflag);
 
-      /* Apply microsecond precision if non-zero */
-      if (*pMS2B500_MICROSECOND (record + blkt_offset) != 0)
+      /* Apply microsecond precision if non-zero, only to a valid decoded time */
+      if (*pMS2B500_MICROSECOND (record + blkt_offset) != 0 && exception.time != NSTUNSET &&
+          exception.time != NSTERROR)
       {
         exception.time +=
             (nstime_t)*pMS2B500_MICROSECOND (record + blkt_offset) * (NSTMODULUS / 1000000);
@@ -1138,8 +1139,8 @@ msr3_data_bounds (const MS3Record *msr, uint32_t *dataoffset, uint32_t *datasize
     /* Validate data offset is within the record to avoid unsigned underflow */
     if (*dataoffset >= (uint32_t)msr->reclen)
     {
-      ms_log (2, "%s: Data offset (%u) is beyond record length (%d)\n",
-              msr->sid, *dataoffset, msr->reclen);
+      ms_log (2, "%s: Data offset (%u) is beyond record length (%d)\n", msr->sid, *dataoffset,
+              msr->reclen);
       return MS_GENERROR;
     }
 
