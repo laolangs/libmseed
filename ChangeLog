@@ -55,6 +55,8 @@
     silently packing v2/v3 records dated 1902-001T00:00:00.
   - Fix ms_nstime2timestr_n() detection of a truncated output buffer.
   - Warn when packing miniSEED 2 with a start year outside 1900-2100.
+  - Fix msr3_data_bounds() Steim trailing-empty-frame scan to inspect the
+    payload's actual final frame instead of bytes offset by the header size.
   - Fix GEOSCOPE 24-bit decoding to assemble the 3-byte sample using the
     record's actual byte order instead of a host-order union read-back, which
     corrupted amplitudes for little-endian-declared GEOSCOPE24 payloads.

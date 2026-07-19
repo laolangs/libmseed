@@ -1191,7 +1191,8 @@ msr3_data_bounds (const MS3Record *msr, uint32_t *dataoffset, uint32_t *datasize
    * trailing, zeroed (empty) frames and subtract them from the size. */
   if (*datasize % 64 == 0 && (msr->encoding == DE_STEIM1 || msr->encoding == DE_STEIM2))
   {
-    while (*datasize > 0 && memcmp (msr->record + (*datasize - 64), nullframe, 64) == 0)
+    while (*datasize > 0 &&
+           memcmp (msr->record + *dataoffset + (*datasize - 64), nullframe, 64) == 0)
     {
       *datasize -= 64;
     }
