@@ -356,3 +356,46 @@ TEST (tracelist, mstl3_addmsr_sampratetol_custom)
   CHECK (addmsr_two_rates (&tolerance, 100.0, 99.5) == 1,
          "Differing sample rates with generous custom tolerance did not merge into 1 segment");
 }
+
+/* A sample rate tolerance callback for mstl3_addmsr() that requires an exact match. */
+static double
+samprate_tol_exact (const MS3Record *msr)
+{
+  (void)msr;
+  return 0.0;
+}
+
+/* Verify that a sample rate tolerance callback returning 0.0 requires an exact
+ * match, rather than falling back to the default relative tolerance.  Rates
+ * that differ within the default tolerance (100.0 vs 100.005 Hz) must remain
+ * separate segments when an exact match is requested. */
+TEST (tracelist, mstl3_addmsr_sampratetol_exact)
+{
+  MS3Tolerance tolerance = MS3Tolerance_INITIALIZER;
+  tolerance.samprate = samprate_tol_exact;
+
+  CHECK (addmsr_two_rates (&tolerance, 100.0, 100.005) == 2,
+         "Sample rates within default tolerance did not remain separate with an exact tolerance");
+}
+
+/* A sample rate tolerance callback for mstl3_addmsr() that returns an invalid
+ * (negative) tolerance. */
+static double
+samprate_tol_negative (const MS3Record *msr)
+{
+  (void)msr;
+  return -1.0;
+}
+
+/* Verify that a negative sample rate tolerance is ignored in favor of the
+ * default tolerance, matching the behavior with no callback at all. */
+TEST (tracelist, mstl3_addmsr_sampratetol_negative)
+{
+  MS3Tolerance tolerance = MS3Tolerance_INITIALIZER;
+  tolerance.samprate = samprate_tol_negative;
+
+  CHECK (addmsr_two_rates (&tolerance, 100.0, 100.005) == 1,
+         "Negative sample rate tolerance did not fall back to the default tolerance");
+  CHECK (addmsr_two_rates (&tolerance, 100.0, 99.5) == 2,
+         "Negative sample rate tolerance did not fall back to the default tolerance");
+}

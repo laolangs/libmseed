@@ -41,10 +41,10 @@ static uint32_t lm_lcg_r (uint64_t *state);
 static uint8_t lm_random_height (uint8_t maximum, uint64_t *state);
 static nstime_t lm_packed_starttime (const MS3TraceSeg *seg, int64_t packedsamples);
 
-/* Test if two sample rates are similar using either specified tolerance (if positive) or default
- * tolerance */
+/* Test if two sample rates are similar using either specified tolerance (if non-negative) or
+ * default tolerance */
 #define IS_SAMPRATE_SIMILAR(SR1, SR2, SRT) \
-  ((SRT > 0.0) ? fabs (SR1 - SR2) <= SRT : MS_ISRATETOLERABLE (SR1, SR2))
+  ((SRT >= 0.0) ? fabs (SR1 - SR2) <= SRT : MS_ISRATETOLERABLE (SR1, SR2))
 
 /* Test if a MS3TraceSeg represents time coverage */
 #define SEGMENT_HAS_TIME_COVERAGE(seg) ((seg)->samplecnt > 0 && (seg)->samprate != 0.0)
@@ -383,7 +383,18 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
 
     /* Calculate high-precision time tolerance */
     if (tolerance && tolerance->time)
-      nstimetol = (nstime_t)(NSTMODULUS * tolerance->time (msr));
+    {
+      double timetol = tolerance->time (msr);
+
+      if (timetol < 0.0)
+      {
+        ms_log (1, "%s: Ignoring negative time tolerance (%g), using default\n",
+                msr->sid, timetol);
+        nstimetol = (nstime_t)(0.5 * nsperiod);
+      }
+      else
+        nstimetol = (nstime_t)(NSTMODULUS * timetol);
+    }
     else
       nstimetol = (nstime_t)(0.5 * nsperiod); /* Default time tolerance is 1/2 sample period */
 
@@ -391,7 +402,16 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
 
     /* Calculate sample rate tolerance */
     if (tolerance && tolerance->samprate)
+    {
       sampratetol = tolerance->samprate (msr);
+
+      if (sampratetol < 0.0)
+      {
+        ms_log (1, "%s: Ignoring negative sample rate tolerance (%g), using default\n",
+                msr->sid, sampratetol);
+        sampratetol = -1.0; /* Restore default sentinel */
+      }
+    }
 
     sampratehz = msr3_sampratehz (msr);
 

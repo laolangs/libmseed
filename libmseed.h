@@ -657,7 +657,9 @@ typedef struct MS3TraceList
  *
  * The \c samprate(MS3Record) function must return a sampling rate tolerance in Hertz.
  *
- * For any function pointer set to NULL a default tolerance will be used.
+ * For any function pointer set to NULL a default tolerance will be used.  A
+ * returned value of 0.0 requires an exact match.  A negative returned value
+ * is invalid; it is ignored and the default tolerance is used instead.
  *
  * Illustrated usage:
  * @code

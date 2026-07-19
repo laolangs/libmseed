@@ -1,6 +1,4 @@
 2026.200:
-  - Fix ms_nstime2timestr_n() to detect a truncated output buffer instead of
-    relying on the snprintf() would-be length, which never signaled truncation.
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
   rolls over, so continuation records and BTIME-encoded blockette times are no
   longer written one second early.
@@ -15,6 +13,10 @@
     multiple trace list segments with mstl3_pack_next().
   - Prevent overflow on sample-count when writing miniSEED v2.
   - Fix NULL dereference in mstl3_free() when the trace list pointer is NULL.
+  - Fix mstl3_addmsr() to honor a sample rate tolerance callback returning 0.0
+    as an exact match instead of falling back to the default tolerance, and warn
+    and use the default when a time or sample rate tolerance callback returns a
+    negative value.
   - Fix selection file parsing to reject invalid start/end times instead of
     silently treating them as open-ended selections.
   - Fix sign loss for negative sub-second epoch times (e.g. -0.5) when printing
@@ -44,6 +46,7 @@
     time string as invalid.
   - Reject an unset or error start time in msr3_pack_init() instead of
     silently packing v2/v3 records dated 1902-001T00:00:00.
+  - Fix ms_nstime2timestr_n() detection of a truncated output buffer.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.
