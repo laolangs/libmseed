@@ -1128,6 +1128,10 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
     return -1;
   }
 
+  /* Warn if outside the conventional year range assumed by many readers */
+  if (year < 1900 || year > 2100)
+    ms_log (1, "%s: Unlikely start year for miniSEED 2 (1900-2100): %d\n", msr->sid, year);
+
   /* Generate factor & multipler representation of sample rate */
   if (ms_genfactmult (msr3_sampratehz (msr), &factor, &multiplier))
   {
