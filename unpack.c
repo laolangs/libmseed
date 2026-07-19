@@ -205,6 +205,13 @@ msr3_unpack_mseed3 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
   memcpy (&samprate, pMS3FSDH_SAMPLERATE (record), sizeof (double));
   msr->samprate = HO8f (samprate, msr->swapflag);
 
+  if (msr->samprate != 0.0 && !isnormal (msr->samprate))
+  {
+    ms_log (2, "%.*s: Invalid sample rate: %g\n", sidlength, pMS3FSDH_SID (record),
+            msr->samprate);
+    return MS_GENERROR;
+  }
+
   uint32_t numsamples;
   memcpy (&numsamples, pMS3FSDH_NUMSAMPLES (record), sizeof (uint32_t));
   msr->samplecnt = HO4u (numsamples, msr->swapflag);
@@ -488,7 +495,12 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
 
     if (blkt_type == 100)
     {
-      msr->samprate = HO4f (*pMS2B100_SAMPRATE (record + blkt_offset), msr->swapflag);
+      float b100rate = HO4f (*pMS2B100_SAMPRATE (record + blkt_offset), msr->swapflag);
+
+      if (b100rate < 0.0 || (b100rate != 0.0 && !isnormal (b100rate)))
+        ms_log (1, "%s: Ignoring invalid Blockette 100 sample rate: %g\n", msr->sid, b100rate);
+      else
+        msr->samprate = b100rate;
     }
 
     /* Blockette 200, generic event detection */

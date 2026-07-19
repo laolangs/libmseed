@@ -193,6 +193,29 @@ TEST (time, sampletime_multileap)
   CHECK (result == expected, "ms_sampletime() unexpectedly adjusted a span with no contained leap seconds");
 }
 
+/* Verify ms_sampletime() rejects spans that are not representable, instead
+ * of casting a non-finite or out-of-range double to nstime_t. */
+TEST (time, sampletime_overflow)
+{
+  nstime_t start;
+  nstime_t result;
+
+  start = ms_timestr2nstime ("2020-01-01T00:00:00Z");
+
+  /* Denormal rate drives the span to +Inf before the cast to integer */
+  result = ms_sampletime (start, 2, 5e-324);
+  CHECK (result == NSTERROR, "ms_sampletime() did not reject a denormal-rate span");
+
+  /* A tiny but normal rate combined with a modest offset overflows int64 */
+  result = ms_sampletime (start, 100, 1e-9);
+  CHECK (result == NSTERROR, "ms_sampletime() did not reject an out-of-range span");
+
+  /* A normal rate still calculates the correct time */
+  result = ms_sampletime (start, 100, 40.0);
+  CHECK (result == start + (nstime_t)(100.0 / 40.0 * NSTMODULUS + 0.5),
+         "ms_sampletime() did not calculate the expected time for a normal rate");
+}
+
 TEST (time, systemtime)
 {
   time_t timeval;

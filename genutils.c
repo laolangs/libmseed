@@ -1808,23 +1808,35 @@ ms_seedtimestr2nstime (const char *seedtimestr)
  * @param[in] offset Offset of sample to calculate time of
  * @param[in] samprate Sample rate (when positive) or period (when negative)
  *
- * @returns Time of the sample at specified offset
+ * @returns Time of the sample at specified offset, or ::NSTERROR if the
+ * result is not representable.
  ***************************************************************************/
 nstime_t
 ms_sampletime (nstime_t time, int64_t offset, double samprate)
 {
   nstime_t span = 0;
   LeapSecond *lslist = leapsecondlist;
+  double spandouble = 0.0;
 
   if (offset > 0)
   {
     /* Calculate time span using sample rate */
     if (samprate > 0.0)
-      span = (nstime_t)(((double)offset / samprate * NSTMODULUS) + 0.5);
+      spandouble = (double)offset / samprate * NSTMODULUS + 0.5;
 
     /* Calculate time span using sample period */
     else if (samprate < 0.0)
-      span = (nstime_t)(((double)offset * -samprate * NSTMODULUS) + 0.5);
+      spandouble = (double)offset * -samprate * NSTMODULUS + 0.5;
+
+    /* Reject a non-finite or out-of-range span before casting to integer */
+    if (!isfinite (spandouble) || spandouble < (double)INT64_MIN || spandouble >= (double)INT64_MAX)
+    {
+      ms_log (2, "Time span is not representable (offset: %" PRId64 ", samprate: %g)\n", offset,
+              samprate);
+      return NSTERROR;
+    }
+
+    span = (nstime_t)spandouble;
   }
 
   /* Adjust for each leap second contained in the time range, if list is available */
@@ -1839,6 +1851,13 @@ ms_sampletime (nstime_t time, int64_t offset, double samprate)
 
       lslist = lslist->next;
     }
+  }
+
+  /* Reject overflow of the final time calculation */
+  if ((span > 0 && time > INT64_MAX - span) || (span < 0 && time < INT64_MIN - span))
+  {
+    ms_log (2, "Sample time is not representable\n");
+    return NSTERROR;
   }
 
   return (time + span);

@@ -27,6 +27,10 @@
     to the nearest 100 µs unit when written to miniSEED v2.
   - Fix ms_sampletime() to adjust for every leap second contained in a span
     instead of only the first.
+  - Fix ms_sampletime() to reject a non-finite or out-of-range time span
+    instead of casting it to an nstime_t and returning a garbage time.
+  - Reject miniSEED v3 records with a non-finite fixed-header sample rate,
+    and ignore an invalid Blockette 100 sample rate instead of applying it.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.
