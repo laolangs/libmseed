@@ -23,6 +23,8 @@
   - Fix out-of-bounds reads on truncated Blockette 2000 in ms_parse_raw2().
   - Detect failed URL transfers instead of reporting them as end-of-file.
   - Document that ISO month-day time strings conform to the RFC 3339 profile.
+  - Fix negative /FDSN/Time/Correction values rounding toward zero instead of
+    to the nearest 100 µs unit when written to miniSEED v2.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.

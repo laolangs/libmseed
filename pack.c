@@ -1282,7 +1282,7 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
 
   if (yyjson_ptr_get_num (ehroot, "/FDSN/Time/Correction", &header_number))
   {
-    *pMS2FSDH_TIMECORRECT (record) = HO4d ((int32_t)(header_number * 10000 + 0.5), swapflag);
+    *pMS2FSDH_TIMECORRECT (record) = HO4d ((int32_t)llround (header_number * 10000), swapflag);
 
     /* Set time correction applied bit in activity flags.
        Rationale: V3 records do not allow unapplied time corrections and unapplied
