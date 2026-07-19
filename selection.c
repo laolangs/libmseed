@@ -196,9 +196,8 @@ ms3_addselect (MS3Selections **ppselections, const char *sidpattern, nstime_t st
   }
 
   /* Reject inverted windows; NSTUNSET/NSTERROR remain open-ended sentinels */
-  if (starttime != NSTUNSET && starttime != NSTERROR &&
-      endtime != NSTUNSET && endtime != NSTERROR &&
-      starttime > endtime)
+  if (starttime != NSTUNSET && starttime != NSTERROR && endtime != NSTUNSET &&
+      endtime != NSTERROR && starttime > endtime)
   {
     ms_log (2, "Selection start time is later than end time\n");
     return -1;
@@ -801,8 +800,8 @@ static int _match_charclass (const char **pp, unsigned char c);
 static int
 ms_globmatch (const char *string, const char *pattern)
 {
-  const char *star_p  = NULL; /* position of the most recent '*' in pattern */
-  const char *star_s  = NULL; /* position in string when that '*' was seen */
+  const char *star_p = NULL;   /* position of the most recent '*' in pattern */
+  const char *star_s = NULL;   /* position in string when that '*' was seen */
   unsigned char star_skip = 0; /* byte to skip past on backtrack, or 0 if none */
   unsigned char c;
 
