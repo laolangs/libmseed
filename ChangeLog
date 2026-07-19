@@ -18,6 +18,8 @@
   - Fix sign loss for negative sub-second epoch times (e.g. -0.5) when printing
     and parsing UNIXEPOCH/NANOSECONDEPOCH time strings.
   - Reject epoch-time strings beyond the representable nstime range.
+  - Reject epoch-time strings whose fractional seconds overflow the nstime
+    range even though the integer seconds are in range.
   - Fix out-of-bounds reads on truncated Blockette 2000 in ms_parse_raw2().
   - Detect failed URL transfers instead of reporting them as end-of-file.
 

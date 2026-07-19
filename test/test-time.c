@@ -127,9 +127,25 @@ TEST (time, timestr2nstime)
   nstime = ms_timestr2nstime ("-14182939.012345679");
   CHECK (nstime == -14182939012345679, "Failed to convert time string: '-14182939.012345679'");
 
+  /* Near-boundary value that remains in range */
+  nstime = ms_timestr2nstime ("+9223372036.5");
+  CHECK (nstime == 9223372036500000000, "Failed to convert time string: '+9223372036.5'");
+
   /* Parsing error tests */
   nstime = ms_timestr2nstime ("this is not a time string");
   CHECK (nstime == NSTERROR, "Failed to produce error for time string: 'this is not a time string'");
+
+  /* Out-of-range seconds */
+  nstime = ms_timestr2nstime ("+99999999999");
+  CHECK (nstime == NSTERROR, "Failed to produce error for time string: '+99999999999'");
+
+  /* In-range seconds that overflow once the fraction is added */
+  nstime = ms_timestr2nstime ("+9223372036.99999999");
+  CHECK (nstime == NSTERROR, "Failed to produce error for time string: '+9223372036.99999999'");
+
+  /* In-range seconds that underflow once the fraction is subtracted */
+  nstime = ms_timestr2nstime ("-9223372036.99999999");
+  CHECK (nstime == NSTERROR, "Failed to produce error for time string: '-9223372036.99999999'");
 
   nstime = ms_timestr2nstime ("0000-00-00");
   CHECK (nstime == NSTERROR, "Failed to produce error for time string: '0000-00-00'");

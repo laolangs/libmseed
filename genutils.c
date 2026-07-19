@@ -1510,11 +1510,27 @@ ms_timestr2nstime (const char *timestr)
 
     if (fsec != 0.0)
     {
+      nstime_t nanofrac = (nstime_t)(fsec * 1000000000.0 + 0.5);
+
       /* Fraction follows the sign of the value (e.g. "-0.5") */
       if (sec < 0 || timestr[0] == '-')
-        nstime -= (int)(fsec * 1000000000.0 + 0.5);
+      {
+        if (nstime < INT64_MIN + nanofrac)
+        {
+          ms_log (2, "Epoch value (%s) is beyond the representable nstime range\n", timestr);
+          return NSTERROR;
+        }
+        nstime -= nanofrac;
+      }
       else
-        nstime += (int)(fsec * 1000000000.0 + 0.5);
+      {
+        if (nstime > INT64_MAX - nanofrac)
+        {
+          ms_log (2, "Epoch value (%s) is beyond the representable nstime range\n", timestr);
+          return NSTERROR;
+        }
+        nstime += nanofrac;
+      }
     }
 
     return nstime;
