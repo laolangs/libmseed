@@ -1,7 +1,7 @@
 2026.200:
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
-  rolls over, so continuation records and BTIME-encoded blockette times are no
-  longer written one second early.
+    rolls over, so continuation records and BTIME-encoded blockette times are no
+    longer written one second early.
   - Fix cumulative start-time rounding drift when repeatedly packing partial
     trace segments by projecting new start times using the apparent rate
     implied by segment start and end times.
@@ -13,6 +13,9 @@
     multiple trace list segments with mstl3_pack_next().
   - Fix out-of-bounds write in msr3_repack_mseed2() by checking the destination
     buffer size before zero-filling padding ahead of Steim-encoded data.
+  - Fix msr3_repack_mseed2() fit check to use the original record length
+    instead of the destination buffer length, avoiding silent truncation of
+    encoded data when the destination buffer is larger than the record.
   - Prevent overflow on sample-count when writing miniSEED v2.
   - Fix NULL dereference in mstl3_free() when the trace list pointer is NULL.
   - Fix mstl3_addmsr() to honor a sample rate tolerance callback returning 0.0

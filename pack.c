@@ -25,9 +25,9 @@
 #include <time.h>
 
 #include "extraheaders.h"
+#include "internalstate.h"
 #include "libmseed.h"
 #include "mseedformat.h"
-#include "internalstate.h"
 #include "packdata.h"
 
 /* Internal from another source file */
@@ -926,12 +926,10 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
 
   totalsize = dataoffset + origdatasize;
 
-  if (recbuflen < totalsize)
+  if (totalsize > (uint32_t)msr->reclen)
   {
-    ms_log (
-        2,
-        "%s: Repacked minimum record length (%u) is larger than destination record buffer (%u)\n",
-        msr->sid, totalsize, recbuflen);
+    ms_log (2, "%s: Repacked record length (%u) is larger than the original record length (%d)\n",
+            msr->sid, totalsize, msr->reclen);
     return -1;
   }
 
