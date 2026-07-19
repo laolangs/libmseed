@@ -37,6 +37,7 @@ static MS3RecordPtr *lm_add_recordptr (MS3TraceSeg *seg, const MS3Record *msr, n
 static void lm_free_segment_memory (MS3TraceSeg *seg, int8_t freeprvtptr);
 static int lm_remove_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg,
                               int8_t freeprvtptr);
+static void lm_update_id_extent (MS3TraceID *id);
 static uint32_t lm_lcg_r (uint64_t *state);
 static uint8_t lm_random_height (uint8_t maximum, uint64_t *state);
 static nstime_t lm_packed_starttime (const MS3TraceSeg *seg, int64_t packedsamples);
@@ -2390,6 +2391,8 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
             packer->current_seg->datasamples = resized;
             packer->current_seg->datasize = (uint64_t)bufsize;
           }
+
+          lm_update_id_extent (packer->current_id);
         }
         else
         {
@@ -2813,6 +2816,8 @@ mstl3_pack_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg,
         seg->datasize = (uint64_t)bufsize;
       }
     }
+
+    lm_update_id_extent (id);
   }
 
   totalpackedrecords += segpackedrecords;
@@ -3276,7 +3281,8 @@ lm_remove_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg, int8_t 
   /* Free all memory associated with the segment */
   lm_free_segment_memory (seg, freeprvtptr);
 
-  /* If this was the last segment, remove the TraceID from the trace list */
+  /* If this was the last segment, remove the TraceID from the trace list,
+   * otherwise refresh its earliest/latest extent from the remaining segments */
   if (id->numsegments == 0)
   {
     /* Find previous nodes at each level for this TraceID */
@@ -3325,8 +3331,23 @@ lm_remove_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg, int8_t 
     /* Decrement trace count */
     mstl->numtraceids--;
   }
+  else
+  {
+    lm_update_id_extent (id);
+  }
 
   return 0;
+}
+
+/* Refresh a TraceID's earliest/latest fields from its (time-ordered) segments */
+static void
+lm_update_id_extent (MS3TraceID *id)
+{
+  if (id && id->first && id->last)
+  {
+    id->earliest = id->first->starttime;
+    id->latest = id->last->endtime;
+  }
 }
 
 /* Pseudo random number generator, as a linear congruential generator (LCG):
