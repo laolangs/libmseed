@@ -617,6 +617,8 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
         ms_log (2, "%s: Error adding selection on line %d\n", filename, linecount);
         return -1;
       }
+
+      selectcount++;
     }
     /* Test for "Network  Station  Location  Channel  [Quality  [Starttime  [Endtime]]]" */
     else if (fieldidx == 4 || fieldidx == 5 || (fieldidx == 6 && isstart6) ||
@@ -647,13 +649,13 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
         ms_log (2, "%s: Error adding selection on line %d\n", filename, linecount);
         return -1;
       }
+
+      selectcount++;
     }
     else
     {
       ms_log (1, "%s: Skipping unrecognized data selection on line %d\n", filename, linecount);
     }
-
-    selectcount++;
   }
 
   if (fp != stdin)
