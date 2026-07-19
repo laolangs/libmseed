@@ -551,8 +551,8 @@ msio_fread (LMIO *io, void *buffer, size_t size)
     }
 
     /* Unpause connection */
-    curl_easy_pause (io->handle, CURLPAUSE_CONT);
     rcp.is_paused = 0;
+    curl_easy_pause (io->handle, CURLPAUSE_CONT);
 
     /* Receive data while connection running, destination space available
      * and connection is not paused. */
