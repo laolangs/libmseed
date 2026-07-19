@@ -162,8 +162,8 @@ ms3_msfp_init (int64_t startoffset, int64_t endoffset, int fd)
     {
       if (lmp_fseek64 (msfp->input.handle, msfp->startoffset, SEEK_SET))
       {
-        ms_log (2, "%s(): Cannot seek file descriptor %d to offset %" PRId64 "\n",
-                __func__, fd, msfp->startoffset);
+        ms_log (2, "%s(): Cannot seek file descriptor %d to offset %" PRId64 "\n", __func__, fd,
+                msfp->startoffset);
         msio_fclose (&msfp->input);
         libmseed_memory.free (msfp);
         return NULL;
@@ -429,8 +429,7 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
     }
 
     /* At end of a known byte range once buffered data reaches the end offset */
-    atrangeend = (msfp->endoffset &&
-                  (msfp->streampos + MSFPBUFLEN (msfp)) > msfp->endoffset);
+    atrangeend = (msfp->endoffset && (msfp->streampos + MSFPBUFLEN (msfp)) > msfp->endoffset);
 
     /* Attempt to parse record from buffer */
     if (MSFPBUFLEN (msfp) >= MINRECLEN)
