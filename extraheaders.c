@@ -162,13 +162,13 @@ mseh_get_ptr_type (const MS3Record *msr, const char *ptr, LM_PARSED_JSON **parse
     return MS_GENERROR;
   }
 
-  /* Nothing can be found in no headers */
-  if (!msr->extralength)
+  /* Nothing can be found without extra headers or a populated parse state */
+  if (!msr->extralength && (parsed == NULL || (parsed->doc == NULL && parsed->mut_doc == NULL)))
   {
     return 0;
   }
 
-  if (!msr->extra)
+  if (!msr->extra && parsed == NULL)
   {
     ms_log (2, "%s() Expected extra headers (msr->extra) are not present\n", __func__);
     return MS_GENERROR;
@@ -308,6 +308,7 @@ mseh_get_ptr_r (const MS3Record *msr, const char *ptr, void *value, char type, u
                 LM_PARSED_JSON **parsestate)
 {
   LM_PARSED_JSON *parsed = NULL;
+  LM_PARSED_JSON *statep = (parsestate) ? *parsestate : NULL;
   yyjson_val *extravalue = NULL;
   const char *stringvalue = NULL;
 
@@ -320,13 +321,13 @@ mseh_get_ptr_r (const MS3Record *msr, const char *ptr, void *value, char type, u
     return MS_GENERROR;
   }
 
-  /* Nothing can be found in no headers */
-  if (!msr->extralength)
+  /* Nothing can be found without extra headers or a populated parse state */
+  if (!msr->extralength && (statep == NULL || (statep->doc == NULL && statep->mut_doc == NULL)))
   {
     return 1;
   }
 
-  if (!msr->extra)
+  if (!msr->extra && statep == NULL)
   {
     ms_log (2, "%s() Expected extra headers (msr->extra) are not present\n", __func__);
     return MS_GENERROR;

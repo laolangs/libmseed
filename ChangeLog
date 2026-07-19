@@ -36,6 +36,10 @@
   - Parse fractional seconds in time strings locale-independently so
     period-decimal fractions are not silently dropped under comma-decimal
     locales (LC_NUMERIC).
+  - Fix mseh_get_ptr_type() and mseh_get_ptr_r() to consult a supplied
+    parsestate before reporting "not found" on a record with no serialized
+    extra headers, so a set-then-get through the same parsestate works on a
+    fresh record.
   - Update MS3TraceID.earliest/latest after packing consumes or removes trace
     segment data so they no longer report stale extents.
   - Fix selection file parsing to reject invalid start/end times instead of
