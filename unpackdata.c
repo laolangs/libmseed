@@ -330,7 +330,8 @@ msr_decode_steim1 (int32_t *input, uint64_t inputlength, uint64_t samplecount, i
     for (idx = (frameidx == 0) ? 1 : 0; idx < diffidx && outputidx < samplecount;
          idx++, outputidx++)
     {
-      output[outputidx] = output[outputidx - 1] + diff[idx];
+      /* Sum in unsigned to avoid signed overflow UB */
+      output[outputidx] = (int32_t) ((uint32_t) output[outputidx - 1] + (uint32_t) diff[idx]);
     }
   } /* Done looping over frames */
 
@@ -592,7 +593,8 @@ msr_decode_steim2 (int32_t *input, uint64_t inputlength, uint64_t samplecount, i
     for (idx = (frameidx == 0) ? 1 : 0; idx < diffidx && outputidx < samplecount;
          idx++, outputidx++)
     {
-      output[outputidx] = output[outputidx - 1] + diff[idx];
+      /* Sum in unsigned to avoid signed overflow UB */
+      output[outputidx] = (int32_t) ((uint32_t) output[outputidx - 1] + (uint32_t) diff[idx]);
     }
   } /* Done looping over frames */
 
