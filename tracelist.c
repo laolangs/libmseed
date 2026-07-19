@@ -389,8 +389,7 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
 
       if (timetol < 0.0)
       {
-        ms_log (1, "%s: Ignoring negative time tolerance (%g), using default\n",
-                msr->sid, timetol);
+        ms_log (1, "%s: Ignoring negative time tolerance (%g), using default\n", msr->sid, timetol);
         nstimetol = (nstime_t)(0.5 * nsperiod);
       }
       else
@@ -408,8 +407,8 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
 
       if (sampratetol < 0.0)
       {
-        ms_log (1, "%s: Ignoring negative sample rate tolerance (%g), using default\n",
-                msr->sid, sampratetol);
+        ms_log (1, "%s: Ignoring negative sample rate tolerance (%g), using default\n", msr->sid,
+                sampratetol);
         sampratetol = -1.0; /* Restore default sentinel */
       }
     }
@@ -1871,6 +1870,7 @@ mstl3_unpack_recordlist (MS3TraceID *id, MS3TraceSeg *seg, void *output, uint64_
             ms_log (2, "%s: Cannot open file (%s): %s\n", id->sid, recordptr->filename,
                     strerror (errno));
 
+            libmseed_memory.free (filelistptr);
             totalunpackedsamples = -1;
             break;
           }
@@ -1887,7 +1887,9 @@ mstl3_unpack_recordlist (MS3TraceID *id, MS3TraceSeg *seg, void *output, uint64_
       /* Allocate memory if needed, over-allocating (x2) to minimize reallocation */
       if (recordptr->msr->reclen > filebuffersize)
       {
-        if ((filebuffer = libmseed_memory.realloc (filebuffer, recordptr->msr->reclen * 2)) == NULL)
+        void *resized = libmseed_memory.realloc (filebuffer, recordptr->msr->reclen * 2);
+
+        if (resized == NULL)
         {
           ms_log (2, "%s: Cannot allocate memory for file read buffer\n", id->sid);
 
@@ -1895,6 +1897,7 @@ mstl3_unpack_recordlist (MS3TraceID *id, MS3TraceSeg *seg, void *output, uint64_
           break;
         }
 
+        filebuffer = resized;
         filebuffersize = recordptr->msr->reclen * 2;
       }
 
