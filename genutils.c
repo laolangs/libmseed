@@ -1627,6 +1627,13 @@ ms_mdtimestr2nstime (const char *timestr)
   else if (fsec != 0.0)
   {
     nsec = (uint32_t)(fsec * 1000000000.0 + 0.5);
+
+    /* Carry a fractional second that rounds up to a full second */
+    if (nsec >= 1000000000)
+    {
+      nsec = 0;
+      sec += 1;
+    }
   }
 
   if (fields < 1)
@@ -1738,6 +1745,13 @@ ms_seedtimestr2nstime (const char *seedtimestr)
   else if (fsec != 0.0)
   {
     nsec = (uint32_t)(fsec * 1000000000.0 + 0.5);
+
+    /* Carry a fractional second that rounds up to a full second */
+    if (nsec >= 1000000000)
+    {
+      nsec = 0;
+      sec += 1;
+    }
   }
 
   if (fields < 1)
