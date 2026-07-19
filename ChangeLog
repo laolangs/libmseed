@@ -25,6 +25,8 @@
   - Document that ISO month-day time strings conform to the RFC 3339 profile.
   - Fix negative /FDSN/Time/Correction values rounding toward zero instead of
     to the nearest 100 µs unit when written to miniSEED v2.
+  - Fix ms_sampletime() to adjust for every leap second contained in a span
+    instead of only the first.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.

@@ -1827,7 +1827,7 @@ ms_sampletime (nstime_t time, int64_t offset, double samprate)
       span = (nstime_t)(((double)offset * -samprate * NSTMODULUS) + 0.5);
   }
 
-  /* Check if the time range contains a leap second, if list is available */
+  /* Adjust for each leap second contained in the time range, if list is available */
   if (lslist)
   {
     while (lslist)
@@ -1835,7 +1835,6 @@ ms_sampletime (nstime_t time, int64_t offset, double samprate)
       if (lslist->leapsecond > time && lslist->leapsecond <= (time + span - NSTMODULUS))
       {
         span -= NSTMODULUS;
-        break;
       }
 
       lslist = lslist->next;

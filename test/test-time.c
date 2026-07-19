@@ -157,6 +157,42 @@ TEST (time, timestr2nstime)
   CHECK (nstime == NSTERROR, "Failed to produce error for time string: '20040512T000000'");
 }
 
+/* Verify ms_sampletime() adjusts by one second per leap second contained in
+ * the span, not just the first, using the embedded leap second list (which
+ * includes leaps at 2015-07-01 and 2017-01-01). */
+TEST (time, sampletime_multileap)
+{
+  nstime_t start;
+  nstime_t naivespan;
+  nstime_t expected;
+  nstime_t result;
+  int64_t offsetsec;
+
+  /* Two leap seconds contained: 2015-07-01 and 2017-01-01 */
+  start = ms_timestr2nstime ("2015-01-01T00:00:00Z");
+  offsetsec = (ms_timestr2nstime ("2017-06-01T00:00:00Z") - start) / NSTMODULUS;
+  naivespan = (nstime_t)((double)offsetsec * 1.0 * NSTMODULUS + 0.5);
+  expected = start + naivespan - 2 * NSTMODULUS;
+  result = ms_sampletime (start, offsetsec, -1.0);
+  CHECK (result == expected, "ms_sampletime() did not adjust for both contained leap seconds");
+
+  /* One leap second contained: 2015-07-01 only */
+  start = ms_timestr2nstime ("2015-01-01T00:00:00Z");
+  offsetsec = (ms_timestr2nstime ("2016-06-01T00:00:00Z") - start) / NSTMODULUS;
+  naivespan = (nstime_t)((double)offsetsec * 1.0 * NSTMODULUS + 0.5);
+  expected = start + naivespan - 1 * NSTMODULUS;
+  result = ms_sampletime (start, offsetsec, -1.0);
+  CHECK (result == expected, "ms_sampletime() did not adjust for the single contained leap second");
+
+  /* No leap seconds contained */
+  start = ms_timestr2nstime ("2018-01-01T00:00:00Z");
+  offsetsec = (ms_timestr2nstime ("2018-02-01T00:00:00Z") - start) / NSTMODULUS;
+  naivespan = (nstime_t)((double)offsetsec * 1.0 * NSTMODULUS + 0.5);
+  expected = start + naivespan;
+  result = ms_sampletime (start, offsetsec, -1.0);
+  CHECK (result == expected, "ms_sampletime() unexpectedly adjusted a span with no contained leap seconds");
+}
+
 TEST (time, systemtime)
 {
   time_t timeval;
