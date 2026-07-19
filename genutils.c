@@ -1819,11 +1819,11 @@ ms_seedtimestr2nstime (const char *seedtimestr)
  * @see ms_readleapsecondfile()
  *
  * @param[in] time Time value for first sample in array
- * @param[in] offset Offset of sample to calculate time of
+ * @param[in] offset Offset of sample to calculate time of, must be non-negative
  * @param[in] samprate Sample rate (when positive) or period (when negative)
  *
- * @returns Time of the sample at specified offset, or ::NSTERROR if the
- * result is not representable.
+ * @returns Time of the sample at specified offset, ::NSTERROR if @p offset
+ * is negative or the result is not representable.
  ***************************************************************************/
 nstime_t
 ms_sampletime (nstime_t time, int64_t offset, double samprate)
@@ -1831,6 +1831,12 @@ ms_sampletime (nstime_t time, int64_t offset, double samprate)
   nstime_t span = 0;
   LeapSecond *lslist = leapsecondlist;
   double spandouble = 0.0;
+
+  if (offset < 0)
+  {
+    ms_log (2, "Sample offset cannot be negative (%" PRId64 ")\n", offset);
+    return NSTERROR;
+  }
 
   if (offset > 0)
   {
