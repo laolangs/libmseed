@@ -1401,6 +1401,8 @@ ms_time2nstime (int year, int yday, int hour, int min, int sec, uint32_t nsec)
  * consistency, a caller is recommened to always include a sign with
  * epoch values.
  *
+ * ISO month-day time strings conform to the RFC 3339 profile.
+ *
  * Note that this routine does some sanity checking of the time string
  * contents, but does _not_ perform robust date-time validation.
  *
@@ -1583,6 +1585,8 @@ ms_timestr2nstime (const char *timestr)
  * assumed to be 1).  For example, specifying "YYYY-MM-DD" assumes HH,
  * MM, SS and FFFF are 0.  The year is required, otherwise there
  * wouldn't be much for a date.
+ *
+ * This format conforms to the RFC 3339 profile.
  *
  * @param[in] timestr Time string in ISO-style, month-day format
  *
