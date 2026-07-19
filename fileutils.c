@@ -241,6 +241,7 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
   int readsize = 0;
   int readcount = 0;
   int retcode = MS_NOERROR;
+  int atrangeend = 0;
 
   if (!ppmsr || !ppmsfp)
   {
@@ -400,6 +401,14 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
       /* Determine read size */
       readsize = (MAXRECLEN - msfp->readlength);
 
+      /* Do not read beyond a known end offset */
+      if (msfp->endoffset)
+      {
+        int64_t inrange = msfp->endoffset + 1 - (msfp->streampos + MSFPBUFLEN (msfp));
+        if (inrange < readsize)
+          readsize = (inrange > 0) ? (int)inrange : 0;
+      }
+
       /* Read data into record buffer only when there is room; a full buffer
        * (readsize == 0) means the buffer is exhausted for the current record
        * and is handled by the oversized-record logic below, not a read error. */
@@ -419,11 +428,15 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
       }
     }
 
+    /* At end of a known byte range once buffered data reaches the end offset */
+    atrangeend = (msfp->endoffset &&
+                  (msfp->streampos + MSFPBUFLEN (msfp)) > msfp->endoffset);
+
     /* Attempt to parse record from buffer */
     if (MSFPBUFLEN (msfp) >= MINRECLEN)
     {
-      /* Set end of file flag if at EOF */
-      if (msio_feof (&msfp->input))
+      /* Set end of file flag if at EOF or a known end offset */
+      if (msio_feof (&msfp->input) || atrangeend)
         pflags |= MSF_ATENDOFFILE;
 
       parseval = msr3_parse (MSFPREADPTR (msfp), MSFPBUFLEN (msfp), ppmsr, pflags, verbose);
@@ -535,8 +548,8 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
             break;
           }
         }
-        /* End of file check */
-        else if (msio_feof (&msfp->input))
+        /* End of file or known end offset check */
+        else if (msio_feof (&msfp->input) || atrangeend)
         {
           if (verbose)
             ms_log (0, "Truncated record at byte offset %" PRId64 ", end offset %" PRId64 ": %s\n",
@@ -548,8 +561,8 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
       }
     } /* End of record detection */
 
-    /* Finished when at end-of-stream and buffer contains less than MINRECLEN */
-    if (msio_feof (&msfp->input) && MSFPBUFLEN (msfp) < MINRECLEN)
+    /* Finished when at end-of-stream or end offset and buffer contains less than MINRECLEN */
+    if ((msio_feof (&msfp->input) || atrangeend) && MSFPBUFLEN (msfp) < MINRECLEN)
     {
       if (msfp->recordcount == 0)
       {
