@@ -210,7 +210,7 @@ msr_decode_steim1 (int32_t *input, uint64_t inputlength, uint64_t samplecount, i
     int32_t d32;
   } *word;
 
-  if (maxframes == 0)
+  if (maxframes == 0 || samplecount == 0)
     return 0;
 
   if (!input || !output || outputlength == 0)
@@ -401,7 +401,7 @@ msr_decode_steim2 (int32_t *input, uint64_t inputlength, uint64_t samplecount, i
     signed int x : 30;
   } s30;
 
-  if (maxframes == 0)
+  if (maxframes == 0 || samplecount == 0)
     return 0;
 
   if (!input || !output || outputlength == 0)
