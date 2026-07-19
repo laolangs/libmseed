@@ -1,4 +1,5 @@
 2026.200:
+  - Fix FILE* leak on error paths in ms_readleapsecondfile().
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
   rolls over, so continuation records and BTIME-encoded blockette times are no
   longer written one second early.

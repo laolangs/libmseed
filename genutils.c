@@ -2028,6 +2028,7 @@ ms_readleapsecondfile (const char *filename)
       if ((ls = (LeapSecond *)libmseed_memory.malloc (sizeof (LeapSecond))) == NULL)
       {
         ms_log (2, "Cannot allocate LeapSecond entry, out of memory?\n");
+        fclose (fp);
         return -1;
       }
 
@@ -2058,6 +2059,7 @@ ms_readleapsecondfile (const char *filename)
   if (ferror (fp))
   {
     ms_log (2, "Error reading leap second file (%s): %s\n", filename, strerror (errno));
+    fclose (fp);
     return -1;
   }
 
