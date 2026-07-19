@@ -1315,8 +1315,22 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
 
   written += 8;
 
-  /* Add Blockette 1001 if microsecond offset or timing quality is present */
-  if (yyjson_ptr_get_uint (ehroot, "/FDSN/Time/Quality", &header_uint) || usec_offset)
+  /* Add Blockette 1001 if microsecond offset or timing quality is present on this
+   * record, or if the sample period is not an integer number of 100 usec units,
+   * in which case continuation records may need a microsecond offset even
+   * though this record does not. */
+  double sampratehz = msr3_sampratehz (msr);
+  int8_t offgrid_possible = 0;
+
+  if (sampratehz > 0.0)
+  {
+    double units = 10000.0 / sampratehz; /* 100 usec units per sample */
+
+    offgrid_possible = (fabs (units - round (units)) > 1.0e-6);
+  }
+
+  if (yyjson_ptr_get_uint (ehroot, "/FDSN/Time/Quality", &header_uint) || usec_offset ||
+      offgrid_possible)
   {
     if (written > UINT16_MAX || (uint64_t)written + 8 > recbuflen)
     {
