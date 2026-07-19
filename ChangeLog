@@ -40,6 +40,8 @@
   - Fix ms_mdtimestr2nstime() and ms_seedtimestr2nstime() to carry a fractional
     second that rounds up to 1.0 into the next second instead of rejecting the
     time string as invalid.
+  - Reject an unset or error start time in msr3_pack_init() instead of
+    silently packing v2/v3 records dated 1902-001T00:00:00.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.

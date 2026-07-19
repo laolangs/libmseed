@@ -193,6 +193,12 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
     return NULL;
   }
 
+  if (msr->starttime == NSTUNSET || msr->starttime == NSTERROR)
+  {
+    ms_log (2, "%s: Record start time is unset\n", msr->sid);
+    return NULL;
+  }
+
   /* Allocate pack state context */
   packer = (MS3RecordPacker *)libmseed_memory.malloc (sizeof (MS3RecordPacker));
   if (!packer)
