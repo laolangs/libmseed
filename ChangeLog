@@ -1,4 +1,6 @@
 2026.200:
+  - Fix ms_nstime2timestr_n() to detect a truncated output buffer instead of
+    relying on the snprintf() would-be length, which never signaled truncation.
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
   rolls over, so continuation records and BTIME-encoded blockette times are no
   longer written one second early.

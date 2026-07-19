@@ -1239,7 +1239,8 @@ ms_nstime2timestr_n (nstime_t nstime, char *timestr, size_t timestrsize, ms_time
     return NULL;
   }
 
-  if (expected == 0 || (expected > 0 && printed != expected))
+  if (expected == 0 || printed < 0 || printed >= (int)timestrsize ||
+      (expected > 0 && printed != expected))
   {
     ms_log (2, "Time string not generated with the expected length\n");
     return NULL;
