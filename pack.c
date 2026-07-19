@@ -918,9 +918,6 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
     dataoffset = 64;
     while (dataoffset < headerlen)
       dataoffset += 64;
-
-    /* Zero memory between blockettes and data if any */
-    memset (record + headerlen, 0, dataoffset - headerlen);
   }
   else
   {
@@ -937,6 +934,10 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
         msr->sid, totalsize, recbuflen);
     return -1;
   }
+
+  /* Zero memory between blockettes and data if any */
+  if (dataoffset > headerlen)
+    memset (record + headerlen, 0, dataoffset - headerlen);
 
   /* Copy encoded data into record */
   memcpy (record + dataoffset, msr->record + origdataoffset, origdatasize);

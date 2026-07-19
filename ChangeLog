@@ -11,6 +11,8 @@
     time corrections to the sentinel and producing a fabricated ~1901 time.
   - Fix invalid free of a caller-owned extra-headers buffer when packing
     multiple trace list segments with mstl3_pack_next().
+  - Fix out-of-bounds write in msr3_repack_mseed2() by checking the destination
+    buffer size before zero-filling padding ahead of Steim-encoded data.
   - Prevent overflow on sample-count when writing miniSEED v2.
   - Fix NULL dereference in mstl3_free() when the trace list pointer is NULL.
   - Fix mstl3_addmsr() to honor a sample rate tolerance callback returning 0.0
