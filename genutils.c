@@ -1135,7 +1135,7 @@ ms_nstime2timestr_n (nstime_t nstime, char *timestr, size_t timestrsize, ms_time
       break;
     case UNIXEPOCH:
       expected = -1;
-      printed = snprintf (timestr, timestrsize, "%" PRId64, rawisec);
+      printed = snprintf (timestr, timestrsize, "%" PRId64, isec);
       break;
     case NANOSECONDEPOCH:
       expected = -1;

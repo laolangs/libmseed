@@ -71,6 +71,22 @@ TEST (time, nstime2timestr)
   ms_nstime2timestr_n (nstime, timestr, sizeof(timestr), ISOMONTHDAY_Z, MICRO_NONE);
   CHECK_STREQ (timestr, "2004-05-12T07:08:09Z");
 
+  /* Negative sub-second times: UNIXEPOCH integer seconds are floored to agree
+   * with calendar formats, e.g. -1.5s is second -2, not -1 */
+  nstime = -1500000000; /* -1.5 seconds */
+  ms_nstime2timestr_n (nstime, timestr, sizeof(timestr), UNIXEPOCH, NONE);
+  CHECK_STREQ (timestr, "-2");
+
+  ms_nstime2timestr_n (nstime, timestr, sizeof(timestr), ISOMONTHDAY_Z, NONE);
+  CHECK_STREQ (timestr, "1969-12-31T23:59:58Z");
+
+  ms_nstime2timestr_n (nstime, timestr, sizeof(timestr), UNIXEPOCH, NANO);
+  CHECK_STREQ (timestr, "-1.500000000");
+
+  nstime = -500000000; /* -0.5 seconds */
+  ms_nstime2timestr_n (nstime, timestr, sizeof(timestr), UNIXEPOCH, NANO);
+  CHECK_STREQ (timestr, "-0.500000000");
+
   /* Unset time */
   ms_nstime2timestr_n (NSTUNSET, timestr, sizeof(timestr), ISOMONTHDAY_Z, NANO_MICRO_NONE);
   CHECK_STREQ (timestr, "UNSET");
