@@ -1486,6 +1486,12 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
     return -1;
   }
 
+  if (type != 'i' && type != 'f' && type != 'd')
+  {
+    ms_log (2, "Unsupported target sample type: %c\n", type);
+    return -1;
+  }
+
   idata = (int32_t *)seg->datasamples;
   fdata = (float *)seg->datasamples;
   ddata = (double *)seg->datasamples;
