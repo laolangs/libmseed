@@ -1383,6 +1383,39 @@ ms_time2nstime (int year, int yday, int hour, int min, int sec, uint32_t nsec)
   return ms_time2nstime_int (year, yday, hour, min, sec, nsec);
 } /* End of ms_time2nstime() */
 
+/***************************************************************************
+ * INTERNAL Convert a fractional-seconds digit string (as captured by a
+ * "%[.0-9]" sscanf() conversion, leading period optional) to nanoseconds.
+ *
+ * Parsing is done with integer arithmetic only, so the result does not
+ * depend on the LC_NUMERIC decimal-point character, unlike an "%lf"
+ * conversion.
+ *
+ * Returns nanoseconds in the range 0 - 1000000000, where 1000000000
+ * indicates the fraction rounded up to a whole second.
+ ***************************************************************************/
+static uint32_t
+ms_frac2nsec (const char *frac)
+{
+  uint32_t nsec = 0;
+  int ndigits = 0;
+
+  if (*frac == '.')
+    frac++;
+
+  for (; ndigits < 9 && *frac >= '0' && *frac <= '9'; frac++, ndigits++)
+    nsec = nsec * 10 + (uint32_t)(*frac - '0');
+
+  for (; ndigits < 9; ndigits++)
+    nsec *= 10;
+
+  /* Round to nearest based on the first truncated digit, if any */
+  if (*frac >= '5' && *frac <= '9')
+    nsec++;
+
+  return nsec;
+} /* End of ms_frac2nsec() */
+
 /** ************************************************************************
  * @brief Convert a time string to a high precision epoch time.
  *
@@ -1428,7 +1461,7 @@ ms_timestr2nstime (const char *timestr)
   int length;
   int fields;
   int64_t sec = 0;
-  double fsec = 0.0;
+  char fracstr[16] = "";
   nstime_t nstime;
 
   if (!timestr)
@@ -1493,7 +1526,7 @@ ms_timestr2nstime (const char *timestr)
   if (!error && length == numberlike &&
       (length != 4 || (length == 4 && (timestr[0] == '-' || timestr[0] == '+'))))
   {
-    fields = sscanf (timestr, "%" SCNd64 "%lf", &sec, &fsec);
+    fields = sscanf (timestr, "%" SCNd64 "%15[.0-9]", &sec, fracstr);
 
     if (fields < 1)
     {
@@ -1511,9 +1544,9 @@ ms_timestr2nstime (const char *timestr)
     /* Convert seconds and fractional seconds to nanoseconds, return combination */
     nstime = MS_EPOCH2NSTIME (sec);
 
-    if (fsec != 0.0)
+    if (fracstr[0])
     {
-      nstime_t nanofrac = (nstime_t)(fsec * 1000000000.0 + 0.5);
+      nstime_t nanofrac = (nstime_t)ms_frac2nsec (fracstr);
 
       /* Fraction follows the sign of the value (e.g. "-0.5") */
       if (sec < 0 || timestr[0] == '-')
@@ -1606,7 +1639,7 @@ ms_mdtimestr2nstime (const char *timestr)
   int hour = 0;
   int min = 0;
   int sec = 0;
-  double fsec = 0.0;
+  char fracstr[16] = "";
   uint32_t nsec = 0;
 
   if (!timestr)
@@ -1615,19 +1648,12 @@ ms_mdtimestr2nstime (const char *timestr)
     return NSTERROR;
   }
 
-  fields = sscanf (timestr, "%d%*[-,/:.]%d%*[-,/:.]%d%*[-,/:.Tt ]%d%*[-,/:.]%d%*[-,/:.]%d%lf",
-                   &year, &mon, &mday, &hour, &min, &sec, &fsec);
+  fields = sscanf (timestr, "%d%*[-,/:.]%d%*[-,/:.]%d%*[-,/:.Tt ]%d%*[-,/:.]%d%*[-,/:.]%d%15[.0-9]",
+                   &year, &mon, &mday, &hour, &min, &sec, fracstr);
 
-  /* Convert fractional seconds to nanoseconds.  Restrict to [0,1) so the
-   * double-to-uint32 conversion is well defined. */
-  if (fsec < 0.0 || fsec >= 1.0)
+  if (fracstr[0])
   {
-    ms_log (2, "fractional second (%g) is out of range\n", fsec);
-    return NSTERROR;
-  }
-  else if (fsec != 0.0)
-  {
-    nsec = (uint32_t)(fsec * 1000000000.0 + 0.5);
+    nsec = ms_frac2nsec (fracstr);
 
     /* Carry a fractional second that rounds up to a full second */
     if (nsec >= 1000000000)
@@ -1724,7 +1750,7 @@ ms_seedtimestr2nstime (const char *seedtimestr)
   int hour = 0;
   int min = 0;
   int sec = 0;
-  double fsec = 0.0;
+  char fracstr[16] = "";
   uint32_t nsec = 0;
 
   if (!seedtimestr)
@@ -1733,19 +1759,12 @@ ms_seedtimestr2nstime (const char *seedtimestr)
     return NSTERROR;
   }
 
-  fields = sscanf (seedtimestr, "%d%*[-,:.]%d%*[-,:.Tt ]%d%*[-,:.]%d%*[-,:.]%d%lf", &year, &yday,
-                   &hour, &min, &sec, &fsec);
+  fields = sscanf (seedtimestr, "%d%*[-,:.]%d%*[-,:.Tt ]%d%*[-,:.]%d%*[-,:.]%d%15[.0-9]", &year,
+                   &yday, &hour, &min, &sec, fracstr);
 
-  /* Convert fractional seconds to nanoseconds.  Restrict to [0,1) so the
-   * double-to-uint32 conversion is well defined. */
-  if (fsec < 0.0 || fsec >= 1.0)
+  if (fracstr[0])
   {
-    ms_log (2, "fractional second (%g) is out of range\n", fsec);
-    return NSTERROR;
-  }
-  else if (fsec != 0.0)
-  {
-    nsec = (uint32_t)(fsec * 1000000000.0 + 0.5);
+    nsec = ms_frac2nsec (fracstr);
 
     /* Carry a fractional second that rounds up to a full second */
     if (nsec >= 1000000000)
