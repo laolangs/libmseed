@@ -1219,6 +1219,10 @@ parse_pathname_range (const char *string, int64_t *start, int64_t *end)
         return NULL;
     }
 
+    /* A range with no digits at all, e.g. a bare '@' or '@-', is not valid */
+    if (!startdigits && !enddigits)
+      return NULL;
+
     /* Convert start and end values to numbers if non-zero length */
     if (start && startdigits)
       *start = (int64_t)strtoull (startstr, NULL, 10);
