@@ -610,13 +610,19 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
 
     /* Test for "SourceID  [Starttime  [Endtime  [Pubversion]]]" */
     if (fieldidx == 1 || (fieldidx == 2 && isstart2) || (fieldidx == 3 && isstart2 && isend3) ||
-        (fieldidx == 4 && isstart2 && isend3 && ms_isinteger (fields[3])))
+        (fieldidx == 4 && isstart2 && isend3))
     {
       /* Convert publication version to integer */
       pubversion = 0;
       if (fields[3])
       {
         long int longpver;
+
+        if (!ms_isinteger (fields[3]))
+        {
+          ms_log (2, "Cannot convert publication version (line %d): %s\n", linecount, fields[3]);
+          return -1;
+        }
 
         longpver = strtol (fields[3], NULL, 10);
 

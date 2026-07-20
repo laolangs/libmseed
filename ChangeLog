@@ -94,6 +94,9 @@
     returning success with the data left unconverted.
   - Reject over-long lines in ms3_readselectionsfile() instead of silently
     parsing the truncated tail as a new selection line.
+  - Fix ms3_readselectionsfile() to reject a 4-field SourceID selection line
+    with a non-integer publication version instead of silently misparsing it
+    as a network/station/location/channel selection.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.
