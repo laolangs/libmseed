@@ -543,7 +543,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_event_detection_r (msr, NULL, &eventdetection, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 200 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
     }
 
@@ -577,7 +577,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_event_detection_r (msr, NULL, &eventdetection, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 201 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
     }
 
@@ -636,7 +636,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_calibration_r (msr, NULL, &calibration, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 300 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
     }
 
@@ -695,7 +695,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_calibration_r (msr, NULL, &calibration, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 310 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
     }
 
@@ -748,7 +748,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_calibration_r (msr, NULL, &calibration, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 320 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
     }
 
@@ -796,7 +796,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_calibration_r (msr, NULL, &calibration, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 390 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
     }
 
@@ -833,7 +833,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_calibration_r (msr, NULL, &calibration, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 395 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
     }
 
@@ -876,7 +876,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       if (mseh_add_timing_exception_r (msr, NULL, &exception, &parsestate))
       {
         ms_log (2, "%s: Problem mapping Blockette 500 to extra headers\n", msr->sid);
-        return MS_GENERROR;
+        goto error_return;
       }
 
       /* Clock model maps to a single value at /FDSN/Clock/Model */
@@ -901,7 +901,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
         {
           ms_log (2, "%s: Record length in Blockette 1000 (%u) exceeds the buffer length (%d)\n",
                   msr->sid, b1000reclen, reclen);
-          return MS_GENERROR;
+          goto error_return;
         }
 
         msr->reclen = b1000reclen;
@@ -925,7 +925,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
       B1001offset = blkt_offset;
 
       /* Optimization: if no other extra headers yet, directly print this common value */
-      if (parsestate == NULL)
+      if (parsestate == NULL && msr->extra == NULL)
       {
         length = snprintf (sval, sizeof (sval), "{\"FDSN\":{\"Time\":{\"Quality\":%d}}}",
                            *pMS2B1001_TIMINGQUALITY (record + blkt_offset));
@@ -933,7 +933,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
         if (!(msr->extra = (char *)libmseed_memory.malloc (length + 1)))
         {
           ms_log (2, "%s: Cannot allocate memory for extra headers\n", msr->sid);
-          return MS_GENERROR;
+          goto error_return;
         }
         memcpy (msr->extra, sval, length + 1);
 
@@ -1086,6 +1086,11 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
   }
 
   return MS_NOERROR;
+
+error_return:
+  if (parsestate)
+    mseh_free_parsestate (&parsestate);
+  return MS_GENERROR;
 } /* End of msr3_unpack_mseed2() */
 
 /** ************************************************************************
