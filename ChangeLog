@@ -1,6 +1,4 @@
 2026.200:
-  - Fix mstl3_readbuffer_selection() to parse a minimum-length record at the
-    exact end of buffer instead of silently skipping it.
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
     rolls over, so continuation records and BTIME-encoded blockette times are no
     longer written one second early.
@@ -94,6 +92,8 @@
     instead of also counting skipped/unrecognized lines.
   - Reject unrecognized target sample types in mstl3_convertsamples() instead of
     returning success with the data left unconverted.
+  - Reject over-long lines in ms3_readselectionsfile() instead of silently
+    parsing the truncated tail as a new selection line.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.

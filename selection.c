@@ -455,6 +455,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
   uint8_t isend3;
   uint8_t isstart6;
   uint8_t isend7;
+  uint8_t truncated;
 
   if (!ppselections || !filename)
   {
@@ -479,6 +480,17 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
   while (fgets (selectline, sizeof (selectline) - 1, fp))
   {
     linecount++;
+
+    /* Detect a line longer than the buffer and consume its remainder,
+     * otherwise the tail of the line is read as a separate line */
+    truncated = 0;
+    if (strchr (selectline, '\n') == NULL && !feof (fp))
+    {
+      int ch;
+      truncated = 1;
+      while ((ch = fgetc (fp)) != '\n' && ch != EOF)
+        ;
+    }
 
     /* Reset fields array */
     for (fieldidx = 0; fieldidx < MAX_SELECTION_FIELDS; fieldidx++)
@@ -516,6 +528,14 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     /* Skip comment lines */
     if (*line == '#')
       continue;
+
+    /* Reject over-long selection lines */
+    if (truncated)
+    {
+      ms_log (2, "Data selection line %d exceeds maximum length of %d characters\n",
+              linecount, (int)sizeof (selectline) - 2);
+      return -1;
+    }
 
     /* Set fields array to whitespace delimited fields */
     cp = line;
