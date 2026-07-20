@@ -94,6 +94,8 @@
     returning success with the data left unconverted.
   - Reject over-long lines in ms3_readselectionsfile() instead of silently
     parsing the truncated tail as a new selection line.
+  - Fix mseh_set_ptr_r() to avoid deleting the existing header value at a JSON
+    Pointer and reporting success when a value allocation fails (e.g. OOM).
   - Fix ms3_readselectionsfile() to reject a 4-field SourceID selection line
     with a non-integer publication version instead of silently misparsing it
     as a network/station/location/channel selection.

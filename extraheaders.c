@@ -363,8 +363,7 @@ mseh_get_ptr_r (const MS3Record *msr, const char *ptr, void *value, char type, u
       *((uint64_t *)value) = unsafe_yyjson_get_uint (extravalue);
   }
   else if (type == 'i' && yyjson_is_int (extravalue) &&
-           (yyjson_is_sint (extravalue) ||
-            unsafe_yyjson_get_uint (extravalue) <= INT64_MAX))
+           (yyjson_is_sint (extravalue) || unsafe_yyjson_get_uint (extravalue) <= INT64_MAX))
   {
     if (value)
       *((int64_t *)value) = unsafe_yyjson_get_sint (extravalue);
@@ -463,6 +462,7 @@ mseh_set_ptr_r (MS3Record *msr, const char *ptr, void *value, char type,
   yyjson_mut_val *merged_val = NULL;
   yyjson_mut_val *target_val = NULL;
   yyjson_mut_val *array_val = NULL;
+  yyjson_mut_val *new_val = NULL;
   bool rv = false;
 
   if (!msr || !ptr || !value)
@@ -532,24 +532,30 @@ mseh_set_ptr_r (MS3Record *msr, const char *ptr, void *value, char type,
   switch (type)
   {
   case 'u':
-    rv = yyjson_mut_doc_ptr_set (parsed->mut_doc, ptr,
-                                 yyjson_mut_uint (parsed->mut_doc, *((uint64_t *)value)));
-    break;
+    new_val = yyjson_mut_uint (parsed->mut_doc, *((uint64_t *)value));
+    goto set_new_val;
   case 'i':
-    rv = yyjson_mut_doc_ptr_set (parsed->mut_doc, ptr,
-                                 yyjson_mut_sint (parsed->mut_doc, *((int64_t *)value)));
-    break;
+    new_val = yyjson_mut_sint (parsed->mut_doc, *((int64_t *)value));
+    goto set_new_val;
   case 'n':
-    rv = yyjson_mut_doc_ptr_set (parsed->mut_doc, ptr,
-                                 yyjson_mut_real (parsed->mut_doc, *((double *)value)));
-    break;
+    new_val = yyjson_mut_real (parsed->mut_doc, *((double *)value));
+    goto set_new_val;
   case 's':
-    rv = yyjson_mut_doc_ptr_set (parsed->mut_doc, ptr,
-                                 yyjson_mut_strcpy (parsed->mut_doc, (const char *)value));
-    break;
+    new_val = yyjson_mut_strcpy (parsed->mut_doc, (const char *)value);
+    goto set_new_val;
   case 'b':
-    rv = yyjson_mut_doc_ptr_set (parsed->mut_doc, ptr,
-                                 yyjson_mut_bool (parsed->mut_doc, *((int *)value) ? true : false));
+    new_val = yyjson_mut_bool (parsed->mut_doc, *((int *)value) ? true : false);
+    goto set_new_val;
+  case 'V':
+    new_val = yyjson_mut_val_mut_copy (parsed->mut_doc, (yyjson_mut_val *)value);
+
+  set_new_val:
+    /* Only set the value if it was created successfully, otherwise a NULL
+     * value would be interpreted by yyjson as a request to remove ptr */
+    if (new_val)
+      rv = yyjson_mut_doc_ptr_set (parsed->mut_doc, ptr, new_val);
+    else
+      ms_log (2, "%s() Cannot create JSON value, out of memory?\n", __func__);
     break;
   case 'M':
     /* Parse supplied patch */
@@ -589,10 +595,6 @@ mseh_set_ptr_r (MS3Record *msr, const char *ptr, void *value, char type,
     yyjson_doc_free (patch_idoc);
     yyjson_mut_doc_free (patch_doc);
 
-    break;
-  case 'V':
-    rv = yyjson_mut_doc_ptr_set (
-        parsed->mut_doc, ptr, yyjson_mut_val_mut_copy (parsed->mut_doc, (yyjson_mut_val *)value));
     break;
   case 'A':
     /* Search for existing array, create if necessary */
