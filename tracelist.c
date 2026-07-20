@@ -2294,6 +2294,17 @@ mstl3_pack_init (MS3TraceList *mstl, int reclen, int8_t encoding, uint32_t flags
  * will be adjusted as data are packed unless the ::MSF_MAINTAINMSTL flag is
  * specified in @p flags of mstl3_pack_init().
  *
+ * Data may be added to the trace list (e.g. with mstl3_addmsr()) between
+ * calls, i.e. after a return of 0, and packing may simply continue with
+ * the same packer.  Appending data to the segment currently being packed
+ * (between calls that return 1) is also safe.  Prepending data (adding
+ * coverage before a segment's start time) to a segment that is actively
+ * being packed is not supported and will return -1; in that case the
+ * trace list itself is left intact, but samples already emitted in the
+ * aborted session have not yet been trimmed from the segment, so a new
+ * packer would emit them again as duplicates.  Add data only between
+ * calls that return 0 to avoid this.
+ *
  * @param[in] packer ::MS3TraceListPacker context
  * @param[in] flags Bit flags to control packing:
  * @parblock
@@ -2331,6 +2342,27 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
   /* If we have an active segment packing state, try to get another record from it */
   if (packer->seg_packing_state)
   {
+    /* The segment buffer may have been reallocated (moved) or grown by
+     * mstl3_addmsr() since the last call.  Appends keep already-packed
+     * samples at the front, so re-syncing the live buffer is safe.  A
+     * prepend (earlier start time) shifts packed samples and cannot be
+     * reconciled with the in-progress record offset. */
+    if (packer->current_seg)
+    {
+      if (packer->current_seg->starttime < packer->msr_template.starttime)
+      {
+        ms_log (2,
+                "%s: Segment start time moved earlier during active packing; "
+                "add data only between records (after a return of 0)\n",
+                packer->current_id ? packer->current_id->sid : "");
+        return -1;
+      }
+
+      packer->msr_template.datasamples = packer->current_seg->datasamples;
+      packer->msr_template.numsamples = packer->current_seg->numsamples;
+      packer->msr_template.samplecnt = packer->current_seg->samplecnt;
+    }
+
     /* Set flags from caller */
     if (flags & MSF_FLUSHDATA)
       packer->seg_packing_state->flags |= MSF_FLUSHDATA;

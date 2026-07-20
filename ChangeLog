@@ -11,6 +11,9 @@
     time corrections to the sentinel and producing a fabricated ~1901 time.
   - Fix invalid free of a caller-owned extra-headers buffer when packing
     multiple trace list segments with mstl3_pack_next().
+  - Fix mstl3_pack_next() to re-sync its segment data pointer before packing,
+    avoiding a stale pointer when mstl3_addmsr() reallocates the buffer
+    between calls, and reject a segment prepend during active packing.
   - Fix out-of-bounds write in msr3_repack_mseed2() by checking the destination
     buffer size before zero-filling padding ahead of Steim-encoded data.
   - Fix msr3_repack_mseed2() fit check to use the original record length
