@@ -112,7 +112,7 @@ header_callback (char *buffer, size_t size, size_t num, void *userdata)
   char *ptr;
 
   if (!buffer || !userdata)
-    return 0;
+    return size * num;
 
   size *= num;
 
@@ -120,7 +120,7 @@ header_callback (char *buffer, size_t size, size_t num, void *userdata)
    * e.g. Content-Range: bytes 512-1023/4096 */
   if (size > 22 && lmp_strncasecmp (buffer, "Content-Range: bytes", 20) == 0)
   {
-    /* Process each character, starting just afer "bytes" unit */
+    /* Process each character, starting just after "bytes" unit */
     for (ptr = buffer + 20; *ptr != '\0' && (ptr - buffer) < (ptrdiff_t)size; ptr++)
     {
       /* Skip spaces before start of range */
@@ -376,11 +376,15 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     /* Start connection, get status & headers, without consuming any data */
     msio_fread (io, NULL, 0);
 
-    /* Detach the header callback's data pointer (a local on this stack frame)
-     * now that the response headers have been consumed, so a later header
-     * callback (e.g. on trailing headers) cannot dereference it after return. */
+    /* Detach the header callback and its data pointer (a local on this stack
+     * frame) now that the response headers have been consumed, so a later
+     * header callback (e.g. on trailing headers) cannot dereference the
+     * pointer or abort the transfer by returning a short count. */
     if (startoffset || endoffset)
+    {
+      curl_easy_setopt (io->handle, CURLOPT_HEADERFUNCTION, NULL);
       curl_easy_setopt (io->handle, CURLOPT_HEADERDATA, NULL);
+    }
 
     curl_easy_getinfo (io->handle, CURLINFO_RESPONSE_CODE, &response_code);
 

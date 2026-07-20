@@ -96,6 +96,9 @@
     parsing the truncated tail as a new selection line.
   - Fix mseh_set_ptr_r() to avoid deleting the existing header value at a JSON
     Pointer and reporting success when a value allocation fails (e.g. OOM).
+  - Fix msio_fopen() to reset CURLOPT_HEADERFUNCTION along with CURLOPT_HEADERDATA
+    after reading response headers, so a later header callback invoked for HTTP
+    trailers cannot abort the transfer or dereference a stale pointer.
   - Fix ms3_readselectionsfile() to reject a 4-field SourceID selection line
     with a non-integer publication version instead of silently misparsing it
     as a network/station/location/channel selection.
