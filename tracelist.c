@@ -950,7 +950,7 @@ mstl3_readbuffer_selection (MS3TraceList **ppmstl, const char *buffer, uint64_t 
   if ((flags & MSF_UNPACKDATA) && selections)
     pflags &= ~(MSF_UNPACKDATA);
 
-  while ((bufferlength - offset) > MINRECLEN)
+  while ((bufferlength - offset) >= MINRECLEN)
   {
     parsevalue = msr3_parse (buffer + offset, bufferlength - offset, &msr, pflags, verbose);
 

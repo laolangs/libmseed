@@ -1,4 +1,6 @@
 2026.200:
+  - Fix mstl3_readbuffer_selection() to parse a minimum-length record at the
+    exact end of buffer instead of silently skipping it.
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
     rolls over, so continuation records and BTIME-encoded blockette times are no
     longer written one second early.
