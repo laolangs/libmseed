@@ -1334,6 +1334,7 @@ mseh_print (const MS3Record *msr, int indent)
   char *extra;
   int idx;
   int instring = 0;
+  int escaped = 0;
 
   if (!msr)
     return MS_GENERROR;
@@ -1354,9 +1355,13 @@ mseh_print (const MS3Record *msr, int indent)
   ms_log (0, "%*s", indent, "");
   for (idx = 1; idx < (msr->extralength - 1); idx++)
   {
-    /* Toggle "in string" flag for double quotes */
-    if (extra[idx] == '"')
+    /* Toggle "in string" flag for unescaped double quotes */
+    if (extra[idx] == '"' && !escaped)
       instring = (instring) ? 0 : 1;
+
+    /* Track backslash escapes within strings so an escaped quote
+     * is not mistaken for a string delimiter */
+    escaped = (instring && !escaped && extra[idx] == '\\') ? 1 : 0;
 
     if (!instring)
     {
