@@ -3380,14 +3380,24 @@ lm_remove_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg, int8_t 
   return 0;
 }
 
-/* Refresh a TraceID's earliest/latest fields from its (time-ordered) segments */
+/* Refresh a TraceID's earliest/latest fields from all of its segments */
 static void
 lm_update_id_extent (MS3TraceID *id)
 {
-  if (id && id->first && id->last)
+  MS3TraceSeg *seg;
+
+  if (!id || !id->first)
+    return;
+
+  id->earliest = id->first->starttime;
+  id->latest = id->first->endtime;
+
+  for (seg = id->first->next; seg; seg = seg->next)
   {
-    id->earliest = id->first->starttime;
-    id->latest = id->last->endtime;
+    if (seg->starttime < id->earliest)
+      id->earliest = seg->starttime;
+    if (seg->endtime > id->latest)
+      id->latest = seg->endtime;
   }
 }
 
