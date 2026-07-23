@@ -108,6 +108,8 @@
   - Fix data-offset overflow in msr3_repack_mseed2() that could hang on
     Steim-encoded input or corrupt non-Steim output when an oversized header
     pushed the data offset past 65535.
+  - Reject a non-positive record length in msr3_repack_mseed2(), avoiding a
+    large out-of-bounds write when repacking a record with an unset reclen.
   - Fix leak of the extra-headers JSON parse state on error returns from the
     v2 blockette loop in msr3_unpack_mseed2(), and avoid orphaning the first
     allocation when a record contains two Blockette 1001s.

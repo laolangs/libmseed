@@ -881,6 +881,13 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
     return -1;
   }
 
+  if (msr->reclen <= 0)
+  {
+    ms_log (2, "%s: Record length (%d) is not set to a valid value\n",
+            msr->sid, msr->reclen);
+    return -1;
+  }
+
   if ((int64_t)recbuflen < msr->reclen)
   {
     ms_log (2,
