@@ -1,4 +1,5 @@
 2026.200:
+  Important fixes and changes:
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
     rolls over, so continuation records and BTIME-encoded blockette times are no
     longer written one second early.
@@ -7,30 +8,39 @@
     implied by segment start and end times.
   - Add Blockette 1001 to v2 records whenever the sample period is not an
     integer number of 100 µs units.
-  - Reject v2 records with an unset (year 0) start time instead of applying
-    time corrections to the sentinel and producing a fabricated ~1901 time.
-  - Fix invalid free of a caller-owned extra-headers buffer when packing
-    multiple trace list segments with mstl3_pack_next().
-  - Fix mstl3_pack_next() to re-sync its segment data pointer before packing,
-    avoiding a stale pointer when mstl3_addmsr() reallocates the buffer
-    between calls, and reject a segment prepend during active packing.
-  - Fix out-of-bounds write in msr3_repack_mseed2() by checking the destination
-    buffer size before zero-filling padding ahead of Steim-encoded data.
+  - Write Blockette 100 sample rate as Hz via msr3_sampratehz() instead of raw
+    msr->samprate, so period-notation rates are not stored as negative Hz.
   - Fix msr3_repack_mseed2() fit check to use the original record length
     instead of the destination buffer length, avoiding silent truncation of
     encoded data when the destination buffer is larger than the record.
-  - Prevent overflow on sample-count when writing miniSEED v2.
-  - Fix NULL dereference in mstl3_free() when the trace list pointer is NULL.
-  - Fix possible infinite loop in msio_fread() by clearing the curl pause flag
-    before unpausing, since curl_easy_pause() may synchronously invoke the
-    write callback and re-pause before the flag is cleared.
+  - Fix out-of-bounds write in msr3_repack_mseed2() by checking the destination
+    buffer size before zero-filling padding ahead of Steim-encoded data.
+  - Fix invalid free of a caller-owned extra-headers buffer when packing
+    multiple trace list segments with mstl3_pack_next().
+
+  Minor fixes and cleanup:
+  - Fix mstl3_pack_next() to re-sync its segment data pointer before packing,
+    avoiding a stale pointer when mstl3_addmsr() reallocates the buffer
+    between calls, and reject a segment prepend during active packing.
+  - Reject an unset or error start time in msr3_pack_init() instead of
+    silently packing v2/v3 records dated 1902-001T00:00:00.
+  - Reject v2 records with an unset (year 0) start time instead of applying
+    time corrections to the sentinel and producing a fabricated ~1901 time.
   - Reset the requested start offset when an HTTP server ignores a byte Range
     request and returns the full body, so stream and record offsets are not
     mislabeled as starting at the unhonored offset.
+  - Fix possible infinite loop in msio_fread() by clearing the curl pause flag
+    before unpausing, since curl_easy_pause() may synchronously invoke the
+    write callback and re-pause before the flag is cleared.
+  - Detect failed URL transfers instead of reporting them as end-of-file.
+  - Fix NULL dereference in mstl3_free() when the trace list pointer is NULL.
+  - Update MS3TraceID.earliest/latest after packing consumes or removes trace
+    segment data so they no longer report stale extents.
   - Fix mstl3_addmsr() to honor a sample rate tolerance callback returning 0.0
     as an exact match instead of falling back to the default tolerance, and warn
     and use the default when a time or sample rate tolerance callback returns a
     negative value.
+  - Prevent overflow on sample-count when writing miniSEED v2.
   - Enforce the end offset of a byte range on local file reads so a record
     extending past the end offset is reported as truncated (MS_ENDOFFILE),
     matching the existing behavior for URL byte-range reads.
@@ -43,8 +53,9 @@
     parsestate before reporting "not found" on a record with no serialized
     extra headers, so a set-then-get through the same parsestate works on a
     fresh record.
-  - Update MS3TraceID.earliest/latest after packing consumes or removes trace
-    segment data so they no longer report stale extents.
+  - Fix out-of-bounds reads on truncated Blockette 2000 in ms_parse_raw2().
+  - Fix ms_sampletime() to adjust for every leap second contained in a span
+    instead of only the first.
   - Fix selection file parsing to reject invalid start/end times instead of
     silently treating them as open-ended selections.
   - Fix sign loss for negative sub-second epoch times (e.g. -0.5) when printing
@@ -56,19 +67,13 @@
   - Fix mseh_get_ptr_r() returning a bit-reinterpreted negative value for type
     'i' requests on extra header integers that are unsigned and out of range
     for int64_t, instead of the wrong-type indicator.
-  - Fix out-of-bounds reads on truncated Blockette 2000 in ms_parse_raw2().
-  - Detect failed URL transfers instead of reporting them as end-of-file.
   - Document that ISO month-day time strings conform to the RFC 3339 profile.
   - Fix negative /FDSN/Time/Correction values rounding toward zero instead of
     to the nearest 100 µs unit when written to miniSEED v2.
-  - Fix ms_sampletime() to adjust for every leap second contained in a span
-    instead of only the first.
   - Fix ms_sampletime() to reject a non-finite or out-of-range time span
     instead of casting it to an nstime_t and returning a garbage time.
   - Fix ms_sampletime() to reject a negative sample offset instead of
     silently returning the input time unchanged.
-  - Write Blockette 100 sample rate as Hz via msr3_sampratehz() instead of raw
-    msr->samprate, so period-notation rates are not stored as negative Hz.
   - Reject miniSEED v3 records with a non-finite fixed-header sample rate,
     and ignore an invalid Blockette 100 sample rate instead of applying it.
   - Fix Blockette 500 microsecond precision from being added to an unset or
@@ -78,8 +83,6 @@
   - Fix ms_mdtimestr2nstime() and ms_seedtimestr2nstime() to carry a fractional
     second that rounds up to 1.0 into the next second instead of rejecting the
     time string as invalid.
-  - Reject an unset or error start time in msr3_pack_init() instead of
-    silently packing v2/v3 records dated 1902-001T00:00:00.
   - Fix ms_nstime2timestr_n() detection of a truncated output buffer.
   - Warn when packing miniSEED 2 with a start year outside 1900-2100.
   - Fix msr3_data_bounds() Steim trailing-empty-frame scan to inspect the
@@ -102,6 +105,9 @@
   - Fix ms3_readselectionsfile() to reject a 4-field SourceID selection line
     with a non-integer publication version instead of silently misparsing it
     as a network/station/location/channel selection.
+  - Fix data-offset overflow in msr3_repack_mseed2() that could hang on
+    Steim-encoded input or corrupt non-Steim output when an oversized header
+    pushed the data offset past 65535.
   - Fix leak of the extra-headers JSON parse state on error returns from the
     v2 blockette loop in msr3_unpack_mseed2(), and avoid orphaning the first
     allocation when a record contains two Blockette 1001s.

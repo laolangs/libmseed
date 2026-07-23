@@ -869,7 +869,7 @@ int
 msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8_t verbose)
 {
   int headerlen;
-  uint16_t dataoffset;
+  uint32_t dataoffset;
   uint32_t origdataoffset;
   uint32_t origdatasize;
   uint32_t totalsize;
@@ -912,16 +912,18 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
     return -1;
   }
 
-  /* Determine offset to encoded data */
+  /* Determine offset to encoded data, rounded up to a 64-byte boundary for
+   * Steim encodings, and confirm it fits the 16-bit v2 data-offset field */
   if (msr->encoding == DE_STEIM1 || msr->encoding == DE_STEIM2)
-  {
-    dataoffset = 64;
-    while (dataoffset < headerlen)
-      dataoffset += 64;
-  }
+    dataoffset = ((uint32_t)headerlen + 63) / 64 * 64;
   else
+    dataoffset = (uint32_t)headerlen;
+
+  if (dataoffset > UINT16_MAX || dataoffset >= recbuflen)
   {
-    dataoffset = headerlen;
+    ms_log (2, "%s: Repacked data offset (%u) does not fit within record length (%u)\n",
+            msr->sid, dataoffset, recbuflen);
+    return -1;
   }
 
   totalsize = dataoffset + origdatasize;
@@ -934,7 +936,7 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
   }
 
   /* Zero memory between blockettes and data if any */
-  if (dataoffset > headerlen)
+  if (dataoffset > (uint32_t)headerlen)
     memset (record + headerlen, 0, dataoffset - headerlen);
 
   /* Copy encoded data into record */
@@ -945,7 +947,7 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
 
   /* Update number of samples and data offset */
   *pMS2FSDH_NUMSAMPLES (record) = HO2u ((uint16_t)msr->samplecnt, swapflag);
-  *pMS2FSDH_DATAOFFSET (record) = HO2u (dataoffset, swapflag);
+  *pMS2FSDH_DATAOFFSET (record) = HO2u ((uint16_t)dataoffset, swapflag);
 
   /* Zero any space between encoded data and end of record.  totalsize is the
    * end of the encoded data (dataoffset + origdatasize), computed above. */
