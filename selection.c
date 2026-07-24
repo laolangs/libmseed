@@ -484,15 +484,17 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
   {
     linecount++;
 
-    /* Detect a line longer than the buffer and consume its remainder,
-     * otherwise the tail of the line is read as a separate line */
+    /* Detect a line longer than the buffer and consume its remainder */
     truncated = 0;
-    if (strchr (selectline, '\n') == NULL && !feof (fp))
+    if (strchr (selectline, '\n') == NULL)
     {
       int ch;
-      truncated = 1;
+
       while ((ch = fgetc (fp)) != '\n' && ch != EOF)
-        ;
+      {
+        if (!isspace (ch))
+          truncated = 1;
+      }
     }
 
     /* Reset fields array */
@@ -535,8 +537,8 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     /* Reject over-long selection lines */
     if (truncated)
     {
-      ms_log (2, "Data selection line %d exceeds maximum length of %d characters\n",
-              linecount, (int)sizeof (selectline) - 2);
+      ms_log (2, "Data selection line %d exceeds maximum length of %d characters\n", linecount,
+              (int)sizeof (selectline) - 1);
       goto error_return;
     }
 
@@ -658,8 +660,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
        * remaining fields are shifted, which cannot be parsed reliably */
       if (isdate5)
       {
-        ms_log (2, "Time value in publication version field (line %d): %s\n",
-                linecount, fields[4]);
+        ms_log (2, "Time value in publication version field (line %d): %s\n", linecount, fields[4]);
         goto error_return;
       }
 
