@@ -406,11 +406,14 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
       goto onerror;
     }
 
-    /* If a byte range was requested but the server did not honor it (no
-     * Content-Range in the response), the full body was returned starting
-     * at offset 0.  Reset the start offset so the stream is labeled correctly. */
-    if (range_requested && !hcp.range_honored && startoffset)
-      *startoffset = 0;
+    /* Fail if a byte range was requested but the server did not honor it
+     * (no Content-Range in the response); the full body starts at offset 0
+     * and would otherwise silently include data outside the requested range. */
+    if (range_requested && !hcp.range_honored)
+    {
+      ms_log (2, "Cannot open %s: server did not honor requested byte range\n", path);
+      goto onerror;
+    }
 #endif /* defined(LIBMSEED_URL) */
   }
   else

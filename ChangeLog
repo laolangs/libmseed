@@ -26,9 +26,9 @@
     silently packing v2/v3 records dated 1902-001T00:00:00.
   - Reject v2 records with an unset (year 0) start time instead of applying
     time corrections to the sentinel and producing a fabricated ~1901 time.
-  - Reset the requested start offset when an HTTP server ignores a byte Range
-    request and returns the full body, so stream and record offsets are not
-    mislabeled as starting at the unhonored offset.
+  - Fail when an HTTP server ignores a requested byte Range and returns the
+    full body, instead of silently relabeling the start offset and returning
+    records outside the requested range.
   - Fix possible infinite loop in msio_fread() by clearing the curl pause flag
     before unpausing, since curl_easy_pause() may synchronously invoke the
     write callback and re-pause before the flag is cleared.
