@@ -1767,7 +1767,14 @@ mstl3_unpack_recordlist (MS3TraceID *id, MS3TraceSeg *seg, void *output, uint64_
   }
 
   /* Calculate buffer size needed for unpacked samples */
-  decodedsize = seg->samplecnt * samplesize;
+  if (seg->samplecnt < 0 || (uint64_t)seg->samplecnt > SIZE_MAX / samplesize)
+  {
+    ms_log (2, "%s: Data buffer size overflow for %" PRId64 " samples\n",
+            id->sid, seg->samplecnt);
+    return -1;
+  }
+
+  decodedsize = (uint64_t)seg->samplecnt * samplesize;
 
   /* If output buffer is supplied, check needed size */
   if (output)

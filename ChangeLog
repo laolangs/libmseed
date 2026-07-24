@@ -124,6 +124,9 @@
   - Fix mstl3_writemseed() to detect output write, flush, and close
     failures and return -1 instead of reporting a false success count
     on a full or read-only filesystem.
+  - Reject a decoded sample buffer size that overflows size_t in
+    mstl3_unpack_recordlist(), avoiding a heap overflow on 32-bit hosts
+    when a segment holds close to 4 GiB of samples.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.
