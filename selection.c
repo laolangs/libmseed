@@ -537,7 +537,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     {
       ms_log (2, "Data selection line %d exceeds maximum length of %d characters\n",
               linecount, (int)sizeof (selectline) - 2);
-      return -1;
+      goto error_return;
     }
 
     /* Set fields array to whitespace delimited fields */
@@ -591,7 +591,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
       if (starttime == NSTERROR)
       {
         ms_log (2, "Cannot convert data selection start time (line %d): %s\n", linecount, cp);
-        return -1;
+        goto error_return;
       }
     }
 
@@ -608,7 +608,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
       if (endtime == NSTERROR)
       {
         ms_log (2, "Cannot convert data selection end time (line %d): %s\n", linecount, cp);
-        return -1;
+        goto error_return;
       }
     }
 
@@ -625,7 +625,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
         if (!ms_isinteger (fields[3]))
         {
           ms_log (2, "Cannot convert publication version (line %d): %s\n", linecount, fields[3]);
-          return -1;
+          goto error_return;
         }
 
         longpver = strtol (fields[3], NULL, 10);
@@ -633,7 +633,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
         if (longpver < 0 || longpver > 255)
         {
           ms_log (2, "Cannot convert publication version (line %d): %s\n", linecount, fields[3]);
-          return -1;
+          goto error_return;
         }
         else
         {
@@ -645,7 +645,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
       if (ms3_addselect (ppselections, fields[0], starttime, endtime, pubversion))
       {
         ms_log (2, "%s: Error adding selection on line %d\n", filename, linecount);
-        return -1;
+        goto error_return;
       }
 
       selectcount++;
@@ -660,7 +660,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
       {
         ms_log (2, "Time value in publication version field (line %d): %s\n",
                 linecount, fields[4]);
-        return -1;
+        goto error_return;
       }
 
       /* Convert quality field to publication version if integer */
@@ -674,7 +674,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
         if (longpver < 0 || longpver > 255)
         {
           ms_log (2, "Cannot convert publication version (line %d): %s\n", linecount, fields[4]);
-          return -1;
+          goto error_return;
         }
         else
         {
@@ -686,7 +686,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
                               endtime, pubversion))
       {
         ms_log (2, "%s: Error adding selection on line %d\n", filename, linecount);
-        return -1;
+        goto error_return;
       }
 
       selectcount++;
@@ -701,6 +701,12 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     fclose (fp);
 
   return selectcount;
+
+error_return:
+  if (fp != stdin)
+    fclose (fp);
+
+  return -1;
 } /* End of ms_readselectionsfile() */
 
 /** ************************************************************************
