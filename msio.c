@@ -172,13 +172,18 @@ header_callback (char *buffer, size_t size, size_t num, void *userdata)
       enddigits = 0;
     }
 
+    /* The range is only honored if an offset was actually applied */
     if (hcp->startoffset && startdigits)
+    {
       *hcp->startoffset = (int64_t)startval;
+      hcp->range_honored = 1;
+    }
 
     if (hcp->endoffset && enddigits)
+    {
       *hcp->endoffset = (int64_t)endval;
-
-    hcp->range_honored = 1;
+      hcp->range_honored = 1;
+    }
   }
 
   return size;
