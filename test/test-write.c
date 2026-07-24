@@ -1512,6 +1512,91 @@ TEST (pack, mstl3_pack_next_maintainmstl)
   mstl3_free (&mstl, 0);
 }
 
+/* Test packing miniSEED records with the mstl3_pack_next() interface under
+ * MSF_MAINTAINMSTL where a short trailing segment cannot fill a record
+ * without a flush.
+ *
+ * Regression test: a prior version reset the packer's scan position to the
+ * list head whenever a freshly-scanned segment returned 0, even under
+ * MSF_MAINTAINMSTL.  Since the trace list is never trimmed in that mode, the
+ * reset caused the next call to re-scan from the head and re-pack segments
+ * that had already been emitted, duplicating their samples.
+ */
+TEST (pack, mstl3_pack_next_maintainmstl_shortsegment)
+{
+  MS3Record msr = MS3Record_INITIALIZER;
+  MS3TraceList *mstl = NULL;
+  uint32_t flags = 0;
+  int32_t isinedata[SINE_DATA_SAMPLES];
+
+  MS3TraceListPacker *packer = NULL;
+  char *record = NULL;
+  int32_t reclen = 0;
+  int result = 0;
+  int64_t packedsamples = 0;
+
+  /* Create integer sine data set */
+  for (int idx = 0; idx < SINE_DATA_SAMPLES; idx++)
+  {
+    isinedata[idx] = (int32_t)(dsinedata[idx]);
+  }
+
+  mstl = mstl3_init (mstl);
+  REQUIRE (mstl != NULL, "mstl3_init() returned unexpected NULL");
+
+  /* Common record parameters */
+  msr.reclen = 512;
+  msr.pubversion = 1;
+  msr.datasamples = isinedata;
+  msr.sampletype = 'i';
+  msr.samprate = 100.0;
+
+  /* Add a trace ID that sorts first and has enough samples to require
+   * multiple records, leaving a sub-record remainder without a flush */
+  strcpy (msr.sid, "FDSN:XX_TEST__A_A_A");
+  msr.starttime = ms_timestr2nstime ("2012-05-12T00:00:00.000000000Z");
+  msr.numsamples = SINE_DATA_SAMPLES;
+  msr.samplecnt = msr.numsamples;
+
+  REQUIRE (mstl3_addmsr (mstl, &msr, 0, 1, flags, NULL) != NULL,
+           "mstl3_addmsr() returned unexpected NULL");
+
+  /* Add a trace ID that sorts last and is far too short to fill a record */
+  strcpy (msr.sid, "FDSN:XX_TEST__Z_Z_Z");
+  msr.starttime = ms_timestr2nstime ("2012-05-12T00:00:00.000000000Z");
+  msr.numsamples = 5;
+  msr.samplecnt = msr.numsamples;
+
+  REQUIRE (mstl3_addmsr (mstl, &msr, 0, 1, flags, NULL) != NULL,
+           "mstl3_addmsr() returned unexpected NULL");
+
+  /* Pack without flushing: emits full records from A_A_A, then the scan
+   * reaches the short Z_Z_Z segment, which cannot fill a record */
+  flags = MSF_MAINTAINMSTL;
+  packer = mstl3_pack_init (mstl, 512, DE_STEIM1, flags, 0, NULL, 0);
+  REQUIRE (packer != NULL, "mstl3_pack_init() returned unexpected NULL");
+
+  while ((result = mstl3_pack_next (packer, 0, &record, &reclen)) == 1)
+    ;
+
+  REQUIRE (result == 0, "mstl3_pack_next() returned an error before flush");
+
+  /* Flush remaining data; with the bug this re-scans from the list head and
+   * re-packs A_A_A's already-emitted records as duplicates */
+  while ((result = mstl3_pack_next (packer, MSF_FLUSHDATA, &record, &reclen)) == 1)
+    ;
+
+  REQUIRE (result == 0, "mstl3_pack_next() returned an error during flush");
+
+  mstl3_pack_free (&packer, &packedsamples);
+
+  /* Total input is SINE_DATA_SAMPLES + 5 samples; packing more than that
+   * means a segment was re-packed and its samples counted twice */
+  CHECK (packedsamples <= SINE_DATA_SAMPLES + 5, "Packed samples exceed total input, indicating duplicate records");
+
+  mstl3_free (&mstl, 0);
+}
+
 /* Test packing v2 miniSEED records with PPUPDATE and flushidle functionality.
  * Two traces H_H_Z and B_H_Z are added to a MS3TraceList using the
  * MSF_PPUPDATETIME flag to track update times.

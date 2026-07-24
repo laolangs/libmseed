@@ -17,8 +17,6 @@
     buffer size before zero-filling padding ahead of Steim-encoded data.
   - Fix invalid free of a caller-owned extra-headers buffer when packing
     multiple trace list segments with mstl3_pack_next().
-  - Fix use-after-free in mstl3_pack_next() when mstl3_addmsr() merges the
-    actively packed segment into a neighboring segment.
 
   Minor fixes and cleanup:
   - Fix mstl3_pack_next() to re-sync its segment data pointer before packing,

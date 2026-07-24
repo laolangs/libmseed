@@ -2644,11 +2644,16 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
         return -1;
       }
 
-      /* result == 0: Segment couldn't produce a record (not enough data without flush)
-       * Free the packing state and continue scanning for another segment */
+      /* result == 0: Segment couldn't produce a record (not enough data without flush).
+       * Free the packing state and continue scanning for another segment. */
       msr3_pack_free (&packer->seg_packing_state, NULL);
-      packer->current_id = NULL;
-      packer->current_seg = NULL;
+
+      /* In maintain mode the trace list is not trimmed, keep current position */
+      if ((packer->flags & MSF_MAINTAINMSTL) == 0)
+      {
+        packer->current_id = NULL;
+        packer->current_seg = NULL;
+      }
     }
   }
 
