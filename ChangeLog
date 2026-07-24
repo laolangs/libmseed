@@ -88,6 +88,9 @@
     segment data so they no longer report stale extents.
   - Reject unrecognized target sample types in mstl3_convertsamples() instead of
     returning success with the data left unconverted.
+  - Fix mstl3_convertsamples() silently converting NaN and out-of-range float
+    and double samples to garbage integer values, and leaving the samples
+    partially converted when a value is rejected.
 
   Packing and writing:
   - Fix mstl3_pack_next() to re-sync its segment data pointer before packing,

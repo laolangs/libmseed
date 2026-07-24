@@ -29,8 +29,8 @@ extern "C"
 {
 #endif
 
-#define LIBMSEED_VERSION "3.4.1"    //!< Library version
-#define LIBMSEED_RELEASE "2026.167" //!< Library release date
+#define LIBMSEED_VERSION "3.5.0"    //!< Library version
+#define LIBMSEED_RELEASE "2026.205" //!< Library release date
 
 /** @defgroup io-functions File and URL I/O */
 /** @defgroup miniseed-record Record Handling */
@@ -776,7 +776,12 @@ extern void mstl3_printgaplist (const MS3TraceList *mstl, ms_timeformat_t timefo
     \sa mstl3_writemseed()
     @{ */
 
-/** @brief Type definition for data source I/O: file-system versus URL */
+/** @brief Type definition for data source I/O: file-system versus URL
+ *
+ * INTERNAL: Callers should not create, inspect, or modify ::LMIO values;
+ * the layout and members may change without notice.  Use the public reading
+ * interfaces and ::MS3FileParam instead.
+ */
 typedef struct LMIO
 {
   enum
@@ -798,10 +803,12 @@ typedef struct LMIO
 
 /** @brief State container for reading miniSEED records from files or URLs.
 
-    In general these values should not be directly set or accessed.  It is
-    possible to allocate a structure and set the \c path, \c startoffset,
+    INTERNAL: In general these values should not be directly set or accessed.
+    It is possible to allocate a structure and set the \c path, \c startoffset,
     and \c endoffset values for advanced usage.  Note that file/URL start
     and end offsets can also be parsed from the path name as well.
+
+    The ::LMIO structure is embedded in ::MS3FileParam.
 */
 typedef struct MS3FileParam
 {
@@ -920,6 +927,10 @@ extern int ms_strncpopen (char *dest, const char *source, int length);
  * Actual values are optional, with special values indicating an unset
  * state.
  *
+ * INTERNAL: Callers should not create, inspect, or modify ::MSEHEventDetection values;
+ * the layout and members may change without notice.  Use the public extra header
+ * functions instead.
+ *
  * @see mseh_add_event_detection_r
  */
 typedef struct MSEHEventDetection
@@ -945,6 +956,10 @@ typedef struct MSEHEventDetection
  *
  * Actual values are optional, with special values indicating an unset
  * state.
+ *
+ * INTERNAL: Callers should not create, inspect, or modify ::MSEHCalibration values;
+ * the layout and members may change without notice.  Use the public extra header
+ * functions instead.
  *
  * @see mseh_add_calibration
  */
@@ -982,6 +997,10 @@ typedef struct MSEHCalibration
  * v2 Blockette 500 fields exactly, so a full-width value need not be
  * null terminated; trailing spaces are treated as padding and ignored.
  *
+ * INTERNAL: Callers should not create, inspect, or modify ::MSEHTimingException values;
+ * the layout and members may change without notice.  Use the public extra header
+ * functions instead.
+ *
  * @see mseh_add_timing_exception
  */
 typedef struct MSEHTimingException
@@ -1001,6 +1020,10 @@ typedef struct MSEHTimingException
  *
  * Actual values are optional, with special values indicating an unset
  * state.
+ *
+ * INTERNAL: Callers should not create, inspect, or modify ::MSEHRecenter values;
+ * the layout and members may change without notice.  Use the public extra header
+ * functions instead.
  *
  * @see mseh_add_recenter
  */
@@ -1602,15 +1625,12 @@ extern void *libmseed_memory_prealloc (void *ptr, size_t size, size_t *currentsi
 #define MSF_PNAMERANGE 0x0008  //!< [Parsing] Parse and utilize byte range from path name suffix
 #define MSF_ATENDOFFILE 0x0010 //!< [Parsing] Reading routine is at the end of the file
 #define MSF_SEQUENCE 0x0020    //!< [Packing] UNSUPPORTED: Maintain a record-level sequence number
-#define MSF_FLUSHDATA                                                                              \
-  0x0040 //!< [Packing] Pack all available data even if final record would not be filled
+#define MSF_FLUSHDATA 0x0040   //!< [Packing] Pack all available data even if final record would not be filled
 #define MSF_PACKVER2 0x0080     //!< [Packing] Pack as miniSEED version 2 instead of 3
 #define MSF_RECORDLIST 0x0100   //!< [TraceList] Build a ::MS3RecordList for each ::MS3TraceSeg
 #define MSF_MAINTAINMSTL 0x0200 //!< [TraceList] Do not modify a trace list when packing
-#define MSF_PPUPDATETIME                                                                           \
-  0x0400 //!< [TraceList] Store update time (as nstime_t) at ::MS3TraceSeg.prvtptr
-#define MSF_SPLITISVERSION \
-  0x0800 //!< [TraceList] Use the splitversion value as version instead of record version
+#define MSF_PPUPDATETIME 0x0400 //!< [TraceList] Store update time (as nstime_t) at ::MS3TraceSeg.prvtptr
+#define MSF_SPLITISVERSION 0x0800 //!< [TraceList] Use the splitversion value as version instead of record version
 #define MSF_SKIPADJACENTDUPLICATES 0x1000 //!< [TraceList] Skip adjacent duplicate records
 /** @} */
 

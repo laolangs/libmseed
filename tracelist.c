@@ -1428,6 +1428,39 @@ lm_add_recordptr (MS3TraceSeg *seg, const MS3Record *msr, nstime_t endtime, int8
   return recordptr;
 } /* End of lm_add_recordptr() */
 
+/***************************************************************************
+ * Test that a floating point sample value can be converted to a 32-bit
+ * integer, and when truncation is not allowed that no sub-integer precision
+ * is lost.  The sourcetype is the singular sample type name for messages.
+ *
+ * The range is tested before any conversion because casting a non-finite or
+ * out-of-range value to an integer is undefined.
+ *
+ * Returns 0 if the value can be converted, otherwise -1.
+ ***************************************************************************/
+static int
+lm_check_int32_sample (double value, int8_t truncate, const char *sourcetype)
+{
+  double rounded = value + (value >= 0 ? 0.5 : -0.5);
+
+  /* Written as a positive range test so NaN, which compares false, is rejected */
+  if (!(rounded > (double)INT32_MIN - 1.0 && rounded < (double)INT32_MAX + 1.0))
+  {
+    ms_log (2, "Cannot convert %s sample value to a 32-bit integer: %g\n", sourcetype, value);
+    return -1;
+  }
+
+  /* Check for loss of sub-integer */
+  if (!truncate && fabs (value - (int32_t)value) > 0.000001)
+  {
+    ms_log (2, "Loss of precision when converting %ss to integers, loss: %g\n", sourcetype,
+            fabs (value - (int32_t)value));
+    return -1;
+  }
+
+  return 0;
+} /* End of lm_check_int32_sample() */
+
 /** ************************************************************************
  * @brief Convert the data samples associated with an MS3TraceSeg to another
  * data type
@@ -1447,6 +1480,10 @@ lm_add_recordptr (MS3TraceSeg *seg, const MS3Record *msr, nstime_t endtime, int8
  * detected an error is returned.  Loss of precision is determined by
  * testing that the absolute difference between the floating point value
  * and the (truncated) integer value is greater than 0.000001.
+ *
+ * A value that is not representable as a 32-bit integer, including NaN and
+ * the infinities, is an error regardless of the @p truncate flag.  On error
+ * the data samples are left unmodified.
  *
  * @param[in] seg The target ::MS3TraceSeg to convert
  * @param[in] type The desired data sample type:
@@ -1500,35 +1537,27 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
   {
     if (seg->sampletype == 'f') /* Convert floats to integers with simple rounding */
     {
+      /* Check all values first, the conversion is in place and a rejected
+       * value must not leave the buffer partially converted */
       for (idx = 0; idx < seg->numsamples; idx++)
-      {
-        /* Check for loss of sub-integer */
-        if (!truncate && fabs (fdata[idx] - (int32_t)fdata[idx]) > 0.000001)
-        {
-          ms_log (2, "Loss of precision when converting floats to integers, loss: %g\n",
-                  fabs (fdata[idx] - (int32_t)fdata[idx]));
+        if (lm_check_int32_sample (fdata[idx], truncate, "float"))
           return -1;
-        }
 
-        /* Round to nearest integer, handling positive and negative values */
+      /* Round to nearest integer, handling positive and negative values */
+      for (idx = 0; idx < seg->numsamples; idx++)
         idata[idx] = (int32_t)(fdata[idx] + (fdata[idx] >= 0 ? 0.5 : -0.5));
-      }
     }
     else if (seg->sampletype == 'd') /* Convert doubles to integers with simple rounding */
     {
+      /* Check all values first, the conversion is in place and a rejected
+       * value must not leave the buffer partially converted */
       for (idx = 0; idx < seg->numsamples; idx++)
-      {
-        /* Check for loss of sub-integer */
-        if (!truncate && fabs (ddata[idx] - (int32_t)ddata[idx]) > 0.000001)
-        {
-          ms_log (2, "Loss of precision when converting doubles to integers, loss: %g\n",
-                  fabs (ddata[idx] - (int32_t)ddata[idx]));
+        if (lm_check_int32_sample (ddata[idx], truncate, "double"))
           return -1;
-        }
 
-        /* Round to nearest integer, handling positive and negative values */
+      /* Round to nearest integer, handling positive and negative values */
+      for (idx = 0; idx < seg->numsamples; idx++)
         idata[idx] = (int32_t)(ddata[idx] + (ddata[idx] >= 0 ? 0.5 : -0.5));
-      }
 
       /* Reallocate buffer for reduced size needed, only if not pre-allocating */
       if (libmseed_prealloc_block_size == 0)
