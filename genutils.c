@@ -1255,6 +1255,10 @@ ms_nstime2timestr_n (nstime_t nstime, char *timestr, size_t timestrsize, ms_time
  * This deprecated function is provided for backwards compatibility.
  * It will call ms_nstime2timestr_n() specifying the maximum size of
  * the time string as 37 bytes.
+ *
+ * The @p timestr buffer must therefore be at least 37 bytes, enough for the
+ * longest output of 36 characters plus the terminating NULL.  A smaller
+ * buffer will be overflowed.
  ***************************************************************************/
 char *
 ms_nstime2timestr (nstime_t nstime, char *timestr, ms_timeformat_t timeformat,
@@ -1269,6 +1273,10 @@ ms_nstime2timestr (nstime_t nstime, char *timestr, ms_timeformat_t timeformat,
  * This deprecated function is provided for backwards compatibility.
  * It will call ms_nstime2timestr_n() specifying the maximum size of
  * the time string as 37 bytes.
+ *
+ * The @p timestr buffer must therefore be at least 37 bytes, enough for the
+ * longest output of 36 characters plus the terminating NULL.  A smaller
+ * buffer will be overflowed.
  ***************************************************************************/
 char *
 ms_nstime2timestrz (nstime_t nstime, char *timestr, ms_timeformat_t timeformat,
