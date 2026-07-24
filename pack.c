@@ -883,8 +883,7 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
 
   if (msr->reclen <= 0)
   {
-    ms_log (2, "%s: Record length (%d) is not set to a valid value\n",
-            msr->sid, msr->reclen);
+    ms_log (2, "%s: Record length (%d) is not set to a valid value\n", msr->sid, msr->reclen);
     return -1;
   }
 
@@ -928,8 +927,8 @@ msr3_repack_mseed2 (const MS3Record *msr, char *record, uint32_t recbuflen, int8
 
   if (dataoffset > UINT16_MAX || dataoffset >= recbuflen)
   {
-    ms_log (2, "%s: Repacked data offset (%u) does not fit within record length (%u)\n",
-            msr->sid, dataoffset, recbuflen);
+    ms_log (2, "%s: Repacked data offset (%u) does not fit within record length (%u)\n", msr->sid,
+            dataoffset, recbuflen);
     return -1;
   }
 
@@ -2223,13 +2222,22 @@ ms_reduce_rate (double samprate, int16_t *factor1, int16_t *factor2)
 {
   int num;
   int den;
-  int32_t intsamprate = (int32_t)(samprate + 0.5);
+  int32_t intsamprate;
 
   int32_t searchfactor1;
   int32_t searchfactor2;
   int32_t closestfactor;
   int32_t closestdiff;
   int32_t diff;
+
+  /* Reject a rate that cannot be represented before converting to an integer,
+   * where an out-of-range value would be undefined.  The maximum representable
+   * nominal rate is 32767 * 32767, higher rates are rejected below in any case.
+   * Written as a positive range test so NaN, which compares false, is rejected. */
+  if (!(samprate > 0.0 && samprate <= (double)(32767 * 32767)))
+    return -1;
+
+  intsamprate = (int32_t)(samprate + 0.5);
 
   /* Handle case of integer sample values. */
   if (fabs (samprate - intsamprate) < 0.0000001)

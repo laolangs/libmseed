@@ -2386,3 +2386,74 @@ TEST (pack, mstl3_pack_next_autoheal_merge)
   CHECK (packedsamples > 0, "mstl3_pack_free() did not report samples packed before the abort");
   mstl3_free (&mstl, 0);
 }
+
+/* Count records emitted, without writing them anywhere */
+static void
+record_counter (char *record, int reclen, void *count)
+{
+  (void)record;
+  (void)reclen;
+  if (count)
+    (*(int *)count)++;
+}
+
+/* Pack a single v2 record at the specified sample rate, returning the
+ * msr3_pack() result and setting 'records' to the number emitted. */
+static int64_t
+pack_v2_at_rate (double samprate, int *records)
+{
+  MS3Record msr = MS3Record_INITIALIZER;
+  int32_t data[200];
+
+  for (int idx = 0; idx < 200; idx++)
+    data[idx] = idx * 3 - 100;
+
+  *records = 0;
+
+  strcpy (msr.sid, "FDSN:XX_TEST__B_H_Z");
+  msr.reclen = 512;
+  msr.pubversion = 1;
+  msr.formatversion = 2;
+  msr.starttime = ms_timestr2nstime ("2012-05-12T00:00:00Z");
+  msr.samprate = samprate;
+  msr.encoding = DE_STEIM1;
+  msr.datasamples = data;
+  msr.sampletype = 'i';
+  msr.numsamples = 200;
+  msr.samplecnt = 200;
+
+  return msr3_pack (&msr, record_counter, records, NULL, MSF_FLUSHDATA, 0);
+}
+
+/* Verify that sample rates which cannot be represented as a miniSEED 2
+ * factor/multiplier pair are rejected rather than converted out of range,
+ * and that rates at the limits of the representable range still pack.
+ *
+ * The maximum representable nominal rate is 32767 * 32767 = 1073676289. */
+TEST (pack, msr3_pack_v2_samprate_range)
+{
+  int records = 0;
+
+  /* Rates beyond the representable range, and NaN, must be rejected */
+  CHECK (pack_v2_at_rate (1.0e10, &records) < 0, "Sample rate 1e10 was not rejected for v2");
+  CHECK (pack_v2_at_rate (1.0e30, &records) < 0, "Sample rate 1e30 was not rejected for v2");
+  CHECK (pack_v2_at_rate (3.0e9, &records) < 0, "Sample rate 3e9 was not rejected for v2");
+  CHECK (pack_v2_at_rate (1073676290.0, &records) < 0,
+         "Sample rate above the maximum nominal rate was not rejected for v2");
+  CHECK (pack_v2_at_rate (NAN, &records) < 0, "A NaN sample rate was not rejected for v2");
+  CHECK (pack_v2_at_rate (INFINITY, &records) < 0,
+         "An infinite sample rate was not rejected for v2");
+
+  /* Rates at and within the limit must still pack, confirming the range test
+   * is not overly restrictive */
+  CHECK (pack_v2_at_rate (1073676289.0, &records) > 0 && records > 0,
+         "The maximum nominal sample rate was rejected for v2");
+  CHECK (pack_v2_at_rate (32767.0, &records) > 0 && records > 0,
+         "Sample rate 32767 was rejected for v2");
+  CHECK (pack_v2_at_rate (100.0, &records) > 0 && records > 0,
+         "Sample rate 100 was rejected for v2");
+  CHECK (pack_v2_at_rate (1.0 / 3.0, &records) > 0 && records > 0,
+         "Sample rate 1/3 was rejected for v2");
+  CHECK (pack_v2_at_rate (-10.0, &records) > 0 && records > 0,
+         "Sample period -10 (0.1 Hz) was rejected for v2");
+}

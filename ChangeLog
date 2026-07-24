@@ -115,6 +115,9 @@
   - Reject an unset or error start time in msr3_pack_init() instead of
     silently packing v2/v3 records dated 1902-001T00:00:00.
   - Warn when packing miniSEED 2 with a start year outside 1900-2100.
+  - Reject a sample rate beyond the representable miniSEED 2 nominal rate,
+    and NaN, before converting it to an integer when reducing the rate to a
+    factor and multiplier, instead of converting it out of range.
 
   Extra headers:
   - Fix mseh_set_ptr_r() to avoid deleting the existing header value at a JSON
