@@ -687,9 +687,9 @@ utf8length_int (const char *str, int maxlength)
  * dest while removing all spaces.  The result is left justified and
  * always null terminated.
  *
- * The destination string must have enough room needed for the
- * non-space characters within @p length and the null terminator, a
- * maximum of @p length + 1.
+ * The destination must be at least @p length + 1 bytes: the
+ * terminator is written after the copied, non-space characters, and
+ * in the worst case (no spaces removed) that is @p dest[length].
  *
  * @param[out] dest Destination for terminated string
  * @param[in] source Source string
@@ -741,9 +741,9 @@ ms_strncpclean (char *dest, const char *source, int length)
  * dest without any trailing spaces.  The result is left justified and
  * always null terminated.
  *
- * The destination string must have enough room needed for the
- * characters within @p length and the null terminator, a maximum of
- * @p length + 1.
+ * The destination must be at least @p length + 1 bytes: the
+ * terminator is always written at @p dest[length], regardless of how
+ * many trailing spaces are trimmed.
  *
  * @param[out] dest Destination for terminated string
  * @param[in] source Source string

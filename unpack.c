@@ -870,8 +870,10 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
 
       exception.receptionquality = *pMS2B500_RECEPTIONQUALITY (record + blkt_offset);
       exception.count = HO4u (*pMS2B500_EXCEPTIONCOUNT (record + blkt_offset), msr->swapflag);
-      ms_strncpcleantail (exception.type, pMS2B500_EXCEPTIONTYPE (record + blkt_offset), 16);
-      ms_strncpcleantail (exception.clockstatus, pMS2B500_CLOCKSTATUS (record + blkt_offset), 128);
+      ms_strncpopen (exception.type, pMS2B500_EXCEPTIONTYPE (record + blkt_offset),
+                     (int)sizeof (exception.type));
+      ms_strncpopen (exception.clockstatus, pMS2B500_CLOCKSTATUS (record + blkt_offset),
+                     (int)sizeof (exception.clockstatus));
 
       if (mseh_add_timing_exception_r (msr, NULL, &exception, &parsestate))
       {

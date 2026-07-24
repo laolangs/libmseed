@@ -142,6 +142,9 @@
     when a segment holds close to 4 GiB of samples.
   - Fix ms_timestr2nstime() to include the input string, instead of an
     empty string, in the epoch conversion error message.
+  - Fix one-byte stack overflow when decoding the Blockette 500 timing
+    exception type and clock status, and serialize them by bounded length
+    so full-width values are neither truncated nor concatenated.
   - Fix FILE* leak in ms3_readselectionsfile() on error returns from the
     parse loop.
 

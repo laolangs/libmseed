@@ -90,6 +90,7 @@ extern int cmpfiles (char *fileA, char *fileB);
 /* Write test output files.  No reference files needed for these tests. */
 #define TESTFILE_TIMECARRY_V2 "testdata-timecarry.mseed2"
 #define TESTFILE_BTIMECARRY_V2 "testdata-btimecarry.mseed2"
+#define TESTFILE_B500FIELDS_V2 "testdata-b500fields.mseed2"
 #define TESTFILE_SAMPLECOUNT_V2 "testdata-samplecount.mseed2"
 #define TESTFILE_MSTLPACK_EXTRA_V2 "testdata-mstlpack-extra.mseed2"
 
@@ -740,6 +741,98 @@ TEST (write, msr3_writemseed_v2_btime_timecarry)
   got = ms_timestr2nstime (gottime);
 
   CHECK (got == expected, "Decoded Blockette 500 time does not match encoded time (BTIME time carry)");
+
+  ms3_readmsr (&rmsr, NULL, 0, 0);
+}
+
+/* Test that v2 Blockette 500 (Timing Exception) 'Type' and 'ClockStatus'
+ * text fields round-trip correctly when they completely fill their 16- and
+ * 128-byte SEED fields, alongside a second exception with short values and
+ * a full-width 'Clock/Model' field.
+ *
+ * The Type and ClockStatus fields are exactly the size of their SEED
+ * counterparts, so a fully populated field is not null terminated on the
+ * wire; decoding it must neither overflow the destination nor read past
+ * the field into adjacent data.
+ */
+/* Exactly 16 characters, matching the Blockette 500 Type field width */
+#define B500TEST_TYPE_FULL "0123456789ABCDEF"
+/* Exactly 128 characters, matching the Blockette 500 ClockStatus field width */
+#define B500TEST_CLOCKSTATUS_FULL \
+  "0123456789ABCDEF" "0123456789ABCDEF" "0123456789ABCDEF" "0123456789ABCDEF" \
+  "0123456789ABCDEF" "0123456789ABCDEF" "0123456789ABCDEF" "0123456789ABCDEF"
+/* Exactly 32 characters, matching the Clock Model field width */
+#define B500TEST_MODEL_FULL "ABCDEFGHIJKLMNOPQRSTUVWXYZ012345"
+
+TEST (write, msr3_writemseed_v2_b500_full_fields)
+{
+  MS3Record *msr = NULL;
+  MS3Record *rmsr = NULL;
+  int32_t sampledata[4] = {1, 2, 3, 4};
+  char gotstr[200];
+  uint32_t flags = MSF_FLUSHDATA | MSF_PACKVER2;
+  int64_t rv;
+  int rrv;
+
+  REQUIRE (strlen (B500TEST_TYPE_FULL) == 16, "Test fixture 'B500TEST_TYPE_FULL' is not 16 characters");
+  REQUIRE (strlen (B500TEST_CLOCKSTATUS_FULL) == 128, "Test fixture 'B500TEST_CLOCKSTATUS_FULL' is not 128 characters");
+  REQUIRE (strlen (B500TEST_MODEL_FULL) == 32, "Test fixture 'B500TEST_MODEL_FULL' is not 32 characters");
+
+  msr = msr3_init (msr);
+  REQUIRE (msr != NULL, "msr3_init() returned unexpected NULL");
+
+  strcpy (msr->sid, "FDSN:XX_TEST__B_H_Z");
+  msr->reclen = 512;
+  msr->pubversion = 1;
+  msr->starttime = ms_timestr2nstime ("2012-06-01T00:00:00Z");
+  msr->samprate = 1.0;
+  msr->encoding = DE_INT32;
+  msr->numsamples  = 4;
+  msr->samplecnt   = 4;
+  msr->datasamples = sampledata;
+  msr->sampletype  = 'i';
+
+  msr->extra = "{\"FDSN\":{\"Time\":{\"Exception\":["
+               "{\"Time\":\"2012-06-01T00:00:01Z\",\"Type\":\"" B500TEST_TYPE_FULL
+               "\",\"ClockStatus\":\"" B500TEST_CLOCKSTATUS_FULL "\"},"
+               "{\"Time\":\"2012-06-01T00:00:02Z\",\"Type\":\"Short\",\"ClockStatus\":\"Brief status\"}"
+               "]},\"Clock\":{\"Model\":\"" B500TEST_MODEL_FULL "\"}}}";
+  msr->extralength = (uint16_t)strlen (msr->extra);
+
+  rv = msr3_writemseed (msr, TESTFILE_B500FIELDS_V2, 1, flags, 0);
+  REQUIRE (rv > 0, "msr3_writemseed() return unexpected value");
+
+  msr->extra = NULL;
+  msr->extralength = 0;
+  msr->datasamples = NULL;
+  msr3_free (&msr);
+
+  rrv = ms3_readmsr (&rmsr, TESTFILE_B500FIELDS_V2, 0, 0);
+  CHECK (rrv == MS_NOERROR, "ms3_readmsr() did not return expected MS_NOERROR");
+  REQUIRE (rmsr != NULL, "ms3_readmsr() did not populate 'rmsr'");
+
+  /* Full-width Type must decode intact, not truncated and not run into ClockStatus */
+  rrv = mseh_get_string (rmsr, "/FDSN/Time/Exception/0/Type", gotstr, sizeof (gotstr));
+  CHECK (rrv == 0, "mseh_get_string() did not find decoded full-width Type");
+  CHECK (strcmp (gotstr, B500TEST_TYPE_FULL) == 0, "Decoded full-width Type does not match encoded value");
+
+  /* Full-width ClockStatus must decode intact and not carry a leaked Type prefix */
+  rrv = mseh_get_string (rmsr, "/FDSN/Time/Exception/0/ClockStatus", gotstr, sizeof (gotstr));
+  CHECK (rrv == 0, "mseh_get_string() did not find decoded full-width ClockStatus");
+  CHECK (strcmp (gotstr, B500TEST_CLOCKSTATUS_FULL) == 0, "Decoded full-width ClockStatus does not match encoded value");
+
+  /* Short values in the second exception must decode without trailing pad */
+  rrv = mseh_get_string (rmsr, "/FDSN/Time/Exception/1/Type", gotstr, sizeof (gotstr));
+  CHECK (rrv == 0, "mseh_get_string() did not find decoded short Type");
+  CHECK (strcmp (gotstr, "Short") == 0, "Decoded short Type does not match encoded value");
+
+  rrv = mseh_get_string (rmsr, "/FDSN/Time/Exception/1/ClockStatus", gotstr, sizeof (gotstr));
+  CHECK (rrv == 0, "mseh_get_string() did not find decoded short ClockStatus");
+  CHECK (strcmp (gotstr, "Brief status") == 0, "Decoded short ClockStatus does not match encoded value");
+
+  rrv = mseh_get_string (rmsr, "/FDSN/Clock/Model", gotstr, sizeof (gotstr));
+  CHECK (rrv == 0, "mseh_get_string() did not find decoded Clock Model");
+  CHECK (strcmp (gotstr, B500TEST_MODEL_FULL) == 0, "Decoded Clock Model does not match encoded value");
 
   ms3_readmsr (&rmsr, NULL, 0, 0);
 }

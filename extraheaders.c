@@ -992,6 +992,33 @@ mseh_add_calibration_r (MS3Record *msr, const char *ptr, MSEHCalibration *calibr
 } /* End of mseh_add_calibration_r() */
 
 /** ************************************************************************
+ * @brief Length of a fixed-width, space-padded field
+ *
+ * Return the length of @p field, a fixed-width buffer of @p size bytes
+ * that may or may not be null terminated, stopping at a terminator if
+ * present and ignoring trailing spaces.
+ *
+ * @param[in] field Fixed-width field, e.g. a decoded SEED text field
+ * @param[in] size Size of @p field in bytes
+ *
+ * @returns The length of the field, excluding any terminator and
+ * trailing spaces.
+ ***************************************************************************/
+static size_t
+field_length (const char *field, size_t size)
+{
+  size_t length = 0;
+
+  while (length < size && field[length] != '\0')
+    length++;
+
+  while (length > 0 && field[length - 1] == ' ')
+    length--;
+
+  return length;
+}
+
+/** ************************************************************************
  * @brief Add timing exception to the extra headers of the given record.
  *
  * If @p ptr is NULL, the default is @c '/FDSN/Time/Exception'.
@@ -1018,6 +1045,7 @@ mseh_add_timing_exception_r (MS3Record *msr, const char *ptr, MSEHTimingExceptio
   yyjson_mut_val clockstatus_key, clockstatus;
 
   char timestring[40];
+  size_t length;
 
   if (!msr || !exception)
   {
@@ -1062,16 +1090,20 @@ mseh_add_timing_exception_r (MS3Record *msr, const char *ptr, MSEHTimingExceptio
     yyjson_mut_set_sint (&count, exception->count);
     yyjson_mut_obj_add (&entry, &count_key, &count);
   }
-  if (exception->type[0])
+
+  length = field_length (exception->type, sizeof (exception->type));
+  if (length > 0)
   {
     yyjson_mut_set_str (&type_key, "Type");
-    yyjson_mut_set_str (&type, exception->type);
+    yyjson_mut_set_strn (&type, exception->type, length);
     yyjson_mut_obj_add (&entry, &type_key, &type);
   }
-  if (exception->clockstatus[0])
+
+  length = field_length (exception->clockstatus, sizeof (exception->clockstatus));
+  if (length > 0)
   {
     yyjson_mut_set_str (&clockstatus_key, "ClockStatus");
-    yyjson_mut_set_str (&clockstatus, exception->clockstatus);
+    yyjson_mut_set_strn (&clockstatus, exception->clockstatus, length);
     yyjson_mut_obj_add (&entry, &clockstatus_key, &clockstatus);
   }
 

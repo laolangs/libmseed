@@ -978,7 +978,9 @@ typedef struct MSEHCalibration
  * @brief Container for timing exception parameters for use in extra headers
  *
  * Actual values are optional, with special values indicating an unset
- * state.
+ * state.  The @a type and @a clockstatus fields are sized to match the
+ * v2 Blockette 500 fields exactly, so a full-width value need not be
+ * null terminated; trailing spaces are treated as padding and ignored.
  *
  * @see mseh_add_timing_exception
  */
@@ -989,9 +991,9 @@ typedef struct MSEHTimingException
   int usec;             /**< [DEPRECATED] microsecond time offset, 0 = not included */
   int receptionquality; /**< Reception quality, 0 to 100% clock accurracy, <0 = not included */
   uint32_t count;       /**< The count thereof, 0 = not included */
-  char type[16];        /**< E.g. "MISSING" or "UNEXPECTED", zero length = not included */
+  char type[16];        /**< E.g. "MISSING" or "UNEXPECTED", all spaces or zero length = not included */
   char
-      clockstatus[128]; /**< Description of clock-specific parameters, zero length = not included */
+      clockstatus[128]; /**< Description of clock-specific parameters, all spaces or zero length = not included */
 } MSEHTimingException;
 
 /**
