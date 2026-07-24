@@ -2222,6 +2222,14 @@ mstl3_pack_ppupdate_flushidle (MS3TraceList *mstl, void (*record_handler) (char 
  *
  * The packing state should be freed with mstl3_pack_free() when done.
  *
+ * If ::MSF_MAINTAINMSTL is set, the trace list is not trimmed, so a partial
+ * record cannot be continued on a later call; each segment is therefore
+ * packed completely on its first visit, as if ::MSF_FLUSHDATA were also set
+ * for that segment. Scanning resumes after the last completed segment on
+ * each call, so trace IDs and segments added after that point are packed by
+ * a later call, but data added at or before it is not. See mstl3_pack_next()
+ * for the complete ::MSF_MAINTAINMSTL contract.
+ *
  * If @p flush_idle_seconds is > 0, segments idle longer than the threshold will
  * be flushed automatically. This requires the ::MSF_PPUPDATETIME flag to be set
  * when adding data to the ::MS3TraceList to track update times.
@@ -2313,6 +2321,15 @@ mstl3_pack_init (MS3TraceList *mstl, int reclen, int8_t encoding, uint32_t flags
  * (autohealing a gap) is not supported and will also return -1.  Add data
  * only between calls that return 0 to avoid these cases.
  *
+ * With ::MSF_MAINTAINMSTL, since the trace list is not trimmed, each segment
+ * is packed completely the first time it is visited and ::MSF_FLUSHDATA is
+ * implied for that segment; a partial record is never deferred.  Scanning
+ * resumes after the last completed segment on each call, so a trace ID or
+ * segment added after that point is packed by a later call.  Data added to,
+ * or before, an already-completed segment is not packed by this packer; a
+ * merge that removes the last completed segment is not supported and will
+ * return -1.
+ *
  * @param[in] packer ::MS3TraceListPacker context
  * @param[in] flags Bit flags to control packing:
  * @parblock
@@ -2336,16 +2353,13 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
   size_t extralength;
   MS3TraceID *id = NULL;
   MS3TraceSeg *seg = NULL;
+  MS3TraceSeg *resume_seg = NULL;
 
   if (!packer || !record || !reclen)
   {
     ms_log (2, "%s(): Required input not defined\n", __func__);
     return -1;
   }
-
-  /* If packing is finished, return immediately */
-  if (packer->finished)
-    return 0;
 
   /* If we have an active segment packing state, try to get another record from it */
   if (packer->seg_packing_state)
@@ -2479,25 +2493,12 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       }
       else if (packer->flags & MSF_MAINTAINMSTL)
       {
-        /* When maintaining the trace list, advance to next segment instead of resetting
-         * to avoid repacking the same segments */
-        if (packer->current_seg && packer->current_seg->next)
-        {
-          /* Move to next segment in current trace ID */
-          packer->current_seg = packer->current_seg->next;
-        }
-        else if (packer->current_id && packer->current_id->next[0])
-        {
-          /* Move to first segment of next trace ID */
-          packer->current_id = packer->current_id->next[0];
-          packer->current_seg = packer->current_id->first;
-        }
-        else
-        {
-          /* Reached the end of the trace list, mark as finished */
-          packer->finished = 1;
-          return 0;
-        }
+        /* Trace list is not trimmed, remember where to resume scanning */
+        packer->last_id = packer->current_id;
+        packer->last_seg = packer->current_seg;
+
+        packer->current_id = NULL;
+        packer->current_seg = NULL;
       }
 
       /* Fall through to scan for next segment to pack */
@@ -2514,11 +2515,38 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
   }
 
   /* Scan trace list to find a segment that can produce a record */
-  /* When MSF_MAINTAINMSTL is set and we have a current position, start from there;
-   * otherwise start from the beginning */
-  if ((packer->flags & MSF_MAINTAINMSTL) && packer->current_id)
+  /* When MSF_MAINTAINMSTL is set, the trace list is not trimmed, so resume
+   * scanning after the last completed segment instead of from the beginning */
+  if ((packer->flags & MSF_MAINTAINMSTL) && packer->last_seg)
   {
-    id = packer->current_id;
+    /* mstl3_addmsr() may have autohealed a gap by merging last_seg into a
+     * neighboring segment and freeing it, leaving the pointer dangling.
+     * Confirm it is still linked before dereferencing it; check by identity
+     * only against the (still-valid) trace ID's segment list, never
+     * dereferencing a possibly-freed segment. */
+    MS3TraceSeg *checkseg = packer->last_id ? packer->last_id->first : NULL;
+
+    while (checkseg && checkseg != packer->last_seg)
+      checkseg = checkseg->next;
+
+    if (!checkseg)
+    {
+      ms_log (2,
+              "%s: Last completed segment was merged or removed; "
+              "add data only between records (after a return of 0)\n",
+              packer->last_id ? packer->last_id->sid : "");
+      return -1;
+    }
+
+    if (packer->last_seg->next)
+    {
+      id = packer->last_id;
+      resume_seg = packer->last_seg->next;
+    }
+    else
+    {
+      id = packer->last_id->next[0];
+    }
   }
   else
   {
@@ -2528,14 +2556,8 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
   for (; id; id = id->next[0])
   {
     /* Determine starting segment for this trace ID */
-    if ((packer->flags & MSF_MAINTAINMSTL) && id == packer->current_id && packer->current_seg)
-    {
-      seg = packer->current_seg;
-    }
-    else
-    {
-      seg = id->first;
-    }
+    seg = (resume_seg) ? resume_seg : id->first;
+    resume_seg = NULL;
 
     for (; seg; seg = seg->next)
     {
@@ -2548,6 +2570,11 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       packer->current_seg = seg;
 
       uint32_t segment_flags = packer->flags;
+
+      /* The trace list is not trimmed in maintain mode, so a partial record
+       * cannot be continued later; pack all samples from each segment */
+      if (packer->flags & MSF_MAINTAINMSTL)
+        segment_flags |= MSF_FLUSHDATA;
 
       /* If flush_idle_nanoseconds is set and the segment has a prvtptr with an
        * update time set during parsing with the ::MSF_PPUPDATETIME flag, check if
@@ -2653,13 +2680,8 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       /* result == 0: Segment couldn't produce a record (not enough data without flush).
        * Free the packing state and continue scanning for another segment. */
       msr3_pack_free (&packer->seg_packing_state, NULL);
-
-      /* In maintain mode the trace list is not trimmed, keep current position */
-      if ((packer->flags & MSF_MAINTAINMSTL) == 0)
-      {
-        packer->current_id = NULL;
-        packer->current_seg = NULL;
-      }
+      packer->current_id = NULL;
+      packer->current_seg = NULL;
     }
   }
 

@@ -17,6 +17,11 @@
     buffer size before zero-filling padding ahead of Steim-encoded data.
   - Fix invalid free of a caller-owned extra-headers buffer when packing
     multiple trace list segments with mstl3_pack_next().
+  - Fix mstl3_pack_next() silently dropping the sample remainder of a
+    MSF_MAINTAINMSTL segment that could not fill a full record; each
+    segment is now packed completely (MSF_FLUSHDATA implied) the first
+    time it is visited, since the trace list is not trimmed and a partial
+    record cannot be completed on a later call.
 
   Minor fixes, hardening, cleanup:
   - Fix mstl3_pack_next() to re-sync its segment data pointer before packing,
