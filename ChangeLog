@@ -69,6 +69,8 @@
   - Reject a "Network Station Location Channel" selection line with a date in
     the Pubversion field instead of silently dropping it and misreading the
     following Starttime/Endtime fields.
+  - Fix off-by-one in selection file reading that rejected a selection line of
+    the documented maximum length as too long.
   - Fix sign loss for negative sub-second epoch times (e.g. -0.5) when printing
     and parsing UNIXEPOCH/NANOSECONDEPOCH time strings.
   - Fix FILE* leak on error paths in ms_readleapsecondfile().

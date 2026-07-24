@@ -480,7 +480,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     fp = stdin;
   }
 
-  while (fgets (selectline, sizeof (selectline) - 1, fp))
+  while (fgets (selectline, sizeof (selectline), fp))
   {
     linecount++;
 
