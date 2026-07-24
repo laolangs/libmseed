@@ -566,6 +566,7 @@ msio_fclose (LMIO *io)
   io->type = LMIO_NULL;
   io->handle = NULL;
   io->handle2 = NULL;
+  io->urlfail = 0;
 
   return 0;
 } /* End of msio_fclose() */
