@@ -394,7 +394,7 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
   for (;;)
   {
     /* Finished when within MINRECLEN from known end offset in stream */
-    if (msfp->endoffset && (msfp->endoffset + 1 - msfp->streampos) < MINRECLEN)
+    if (msfp->endoffset && (msfp->endoffset - msfp->streampos) < (MINRECLEN - 1))
     {
       retcode = MS_ENDOFFILE;
       break;
@@ -425,9 +425,9 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
        * once the data has been buffered, via the atrangeend check. */
       if (msfp->endoffset && msfp->input.type != LMIO_URL)
       {
-        int64_t inrange = msfp->endoffset + 1 - (msfp->streampos + MSFPBUFLEN (msfp));
-        if (inrange < readsize)
-          readsize = (inrange > 0) ? (int)inrange : 0;
+        int64_t inrange = msfp->endoffset - (msfp->streampos + MSFPBUFLEN (msfp));
+        if (inrange < (readsize - 1))
+          readsize = (inrange >= 0) ? (int)(inrange + 1) : 0;
       }
 
       /* Read data into record buffer only when there is room; a full buffer

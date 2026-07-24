@@ -408,6 +408,7 @@ TEST (read, v2_encodings)
 
 TEST (read, byterange)
 {
+  MS3FileParam *msfp = NULL;
   MS3Record *msr = NULL;
   nstime_t nstime;
   uint32_t flags = MSF_UNPACKDATA;
@@ -452,15 +453,34 @@ TEST (read, byterange)
          "ms3_readmsr() did not return expected MS_GENERROR for oversized start offset");
   ms3_readmsr (&msr, NULL, flags, 0);
 
-  /* INT64_MAX itself is still a valid start offset, so the range is
-   * accepted and the file is opened and seeked; reading then finds no
-   * data beyond the offset rather than the range being rejected outright
-   * as a malformed pattern */
-  rv = ms3_readmsr (&msr,
-                    "data/testdata-oneseries-mixedlengths-mixedorder.mseed3@9223372036854775807-",
+  /* INT64_MAX itself is still a valid start offset, so the range is accepted
+   * instead of being rejected outright as a malformed pattern.  Reading then
+   * fails, either at the seek or on finding no data beyond the offset,
+   * depending on how far the platform allows a seek, so check the parsed
+   * offset rather than the return code. */
+  rv = ms3_readmsr_r (&msfp, &msr,
+                      "data/testdata-oneseries-mixedlengths-mixedorder.mseed3@9223372036854775807-",
+                      flags, 0);
+  CHECK (rv != MS_NOERROR, "ms3_readmsr_r() did not return an error for boundary start offset");
+  REQUIRE (msfp != NULL, "ms3_readmsr_r() did not populate 'msfp'");
+  CHECK (msfp->startoffset == INT64_MAX, "Boundary start offset was not parsed as a byte range");
+  ms3_readmsr_r (&msfp, &msr, NULL, flags, 0);
+
+  /* A valid start offset past the end of the file is accepted and seeked to,
+   * reading then finds no data */
+  rv = ms3_readmsr (&msr, "data/testdata-oneseries-mixedlengths-mixedorder.mseed3@1000000-",
                     flags, 0);
   CHECK (rv == MS_NOTSEED,
-         "ms3_readmsr() did not return expected MS_NOTSEED for boundary start offset");
+         "ms3_readmsr() did not return expected MS_NOTSEED for start offset past end of file");
+  ms3_readmsr (&msr, NULL, flags, 0);
+
+  /* An end offset of INT64_MAX must not overflow the end-of-range check */
+  rv = ms3_readmsr (&msr,
+                    "data/testdata-oneseries-mixedlengths-mixedorder.mseed3@0-9223372036854775807",
+                    flags, 0);
+  CHECK (rv == MS_NOERROR,
+         "ms3_readmsr() did not return expected MS_NOERROR for maximum end offset");
+  CHECK (msr != NULL && msr->numsamples > 0, "Maximum end offset read no samples");
   ms3_readmsr (&msr, NULL, flags, 0);
 }
 
