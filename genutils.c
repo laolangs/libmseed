@@ -1254,13 +1254,13 @@ ms_nstime2timestr_n (nstime_t nstime, char *timestr, size_t timestrsize, ms_time
  *
  * This deprecated function is provided for backwards compatibility.
  * It will call ms_nstime2timestr_n() specifying the maximum size of
- * the time string as 36 bytes.
+ * the time string as 37 bytes.
  ***************************************************************************/
 char *
 ms_nstime2timestr (nstime_t nstime, char *timestr, ms_timeformat_t timeformat,
                    ms_subseconds_t subseconds)
 {
-  return ms_nstime2timestr_n (nstime, timestr, 36, timeformat, subseconds);
+  return ms_nstime2timestr_n (nstime, timestr, 37, timeformat, subseconds);
 } /* End of ms_nstime2timestr() */
 
 /** ************************************************************************
@@ -1268,7 +1268,7 @@ ms_nstime2timestr (nstime_t nstime, char *timestr, ms_timeformat_t timeformat,
  *
  * This deprecated function is provided for backwards compatibility.
  * It will call ms_nstime2timestr_n() specifying the maximum size of
- * the time string as 36 bytes.
+ * the time string as 37 bytes.
  ***************************************************************************/
 char *
 ms_nstime2timestrz (nstime_t nstime, char *timestr, ms_timeformat_t timeformat,
@@ -1281,7 +1281,7 @@ ms_nstime2timestrz (nstime_t nstime, char *timestr, ms_timeformat_t timeformat,
   else if (timeformat == ISOMONTHDAY_SPACE)
     timeformat = ISOMONTHDAY_SPACE_Z;
 
-  return ms_nstime2timestr_n (nstime, timestr, 36, timeformat, subseconds);
+  return ms_nstime2timestr_n (nstime, timestr, 37, timeformat, subseconds);
 } /* End of ms_nstime2timestrz() */
 
 /***************************************************************************
