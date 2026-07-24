@@ -36,6 +36,9 @@
     before unpausing, since curl_easy_pause() may synchronously invoke the
     write callback and re-pause before the flag is cleared.
   - Detect failed URL transfers instead of reporting them as end-of-file.
+  - Add connection and stall timeouts for URL transfers, configurable with
+    ms3_url_timeout() or the LIBMSEED_URL_TIMEOUT environment variable, so a
+    server that stops responding mid-transfer no longer hangs indefinitely.
   - Reject a path or URL longer than the internal buffer in ms3_readmsr()
     instead of silently truncating it and opening the wrong resource.
   - Fix NULL dereference in mstl3_free() when the trace list pointer is NULL.

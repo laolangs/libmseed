@@ -760,6 +760,8 @@ extern void mstl3_printgaplist (const MS3TraceList *mstl, ms_timeformat_t timefo
     - set the User-Agent header with @ref ms3_url_useragent()
     - set username and password for authentication with @ref ms3_url_userpassword()
     - set arbitrary headers with @ref ms3_url_addheader()
+    - set connection and stall timeouts with @ref ms3_url_timeout(), or the stall timeout with
+   the \b LIBMSEED_URL_TIMEOUT environment variable
     - disable TLS/SSL peer and host verficiation by setting \b LIBMSEED_SSL_NOVERIFY environment
    variable
 
@@ -847,6 +849,7 @@ extern int ms3_readtracelist_selection (MS3TraceList **ppmstl, const char *mspat
                                         const MS3Selections *selections, int8_t splitversion,
                                         uint32_t flags, int8_t verbose);
 extern int ms3_url_useragent (const char *program, const char *version);
+extern int ms3_url_timeout (long connecttimeout, long stalltimeout);
 extern int ms3_url_userpassword (const char *userpassword);
 extern int ms3_url_addheader (const char *header);
 extern void ms3_url_freeheaders (void);

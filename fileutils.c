@@ -932,6 +932,44 @@ ms3_url_useragent (const char *program, const char *version)
 } /* End of ms3_url_useragent() */
 
 /** ************************************************************************
+ * @brief Set connection and stall timeouts for URL-based requests.
+ *
+ * Set global timeouts, in seconds, for URL-based requests generated
+ * by the library.  The @p connecttimeout limits the time allowed to
+ * establish a connection and the @p stalltimeout limits the time a
+ * transfer is allowed to proceed at less than 1 byte/second, guarding
+ * against a stalled connection that would otherwise hang indefinitely.
+ *
+ * A value of 0 disables the respective timeout and a negative value
+ * leaves it unchanged.  If not set, a connect timeout of 60 seconds
+ * and a stall timeout of 300 seconds are used by default.  The stall
+ * timeout can also be set with the \b LIBMSEED_URL_TIMEOUT
+ * environment variable, overridden by a call to this function.
+ *
+ * An error will be returned when the library was not compiled with
+ * URL support.
+ *
+ * @param[in] connecttimeout Connection timeout in seconds, negative to leave unchanged
+ * @param[in] stalltimeout Stall (low-speed) timeout in seconds, negative to leave unchanged
+ *
+ * @returns 0 on succes and a negative library error code on error.
+ *
+ * @ref MessageOnError - this function logs a message on error
+ ***************************************************************************/
+int
+ms3_url_timeout (long connecttimeout, long stalltimeout)
+{
+#if !defined(LIBMSEED_URL)
+  (void)connecttimeout; /* Unused */
+  (void)stalltimeout;   /* Unused */
+  ms_log (2, "URL support not included in library\n");
+  return -1;
+#else
+  return msio_url_timeout (connecttimeout, stalltimeout);
+#endif
+} /* End of ms3_url_timeout() */
+
+/** ************************************************************************
  * @brief Set authentication credentials for URL-based requests.
  *
  * Sets global user and password for authentication for URL-based

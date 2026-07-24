@@ -31,11 +31,19 @@
 
 #include <curl/curl.h>
 
+/* Default timeouts, in seconds, for URL connections */
+#define LIBMSEED_URL_CONNECTTIMEOUT_DEFAULT 60
+#define LIBMSEED_URL_STALLTIMEOUT_DEFAULT 300
+
 /* Control for enabling debugging information */
 int libmseed_url_debug = -1;
 
 /* Control for SSL peer and host verification */
 long libmseed_ssl_noverify = -1;
+
+/* Timeouts, in seconds, for URL connections; negative means unset */
+long libmseed_url_connecttimeout = -1;
+long libmseed_url_stalltimeout = -1;
 
 /* A global libcurl easy handle for configuration options */
 CURL *gCURLeasy = NULL;
@@ -248,6 +256,21 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
         libmseed_ssl_noverify = 0;
     }
 
+    /* Check for stall (low-speed) timeout environment variable */
+    if (libmseed_url_stalltimeout < 0)
+    {
+      char *timeoutstr = getenv ("LIBMSEED_URL_TIMEOUT");
+      long timeoutval;
+
+      if (timeoutstr && (timeoutval = strtol (timeoutstr, NULL, 10)) > 0)
+        libmseed_url_stalltimeout = timeoutval;
+      else
+        libmseed_url_stalltimeout = LIBMSEED_URL_STALLTIMEOUT_DEFAULT;
+    }
+
+    if (libmseed_url_connecttimeout < 0)
+      libmseed_url_connecttimeout = LIBMSEED_URL_CONNECTTIMEOUT_DEFAULT;
+
     /* Configure the libcurl easy handle, duplicate global options if present */
     io->handle = (gCURLeasy) ? curl_easy_duphandle (gCURLeasy) : curl_easy_init ();
 
@@ -292,6 +315,25 @@ msio_fopen (LMIO *io, const char *path, const char *mode, int64_t *startoffset, 
     if (curl_easy_setopt (io->handle, CURLOPT_NOSIGNAL, 1L) != CURLE_OK)
     {
       ms_log (2, "Cannot set CURLOPT_NOSIGNAL\n");
+      goto onerror;
+    }
+
+    /* Connection timeout, 0 disables */
+    if (libmseed_url_connecttimeout > 0 &&
+        curl_easy_setopt (io->handle, CURLOPT_CONNECTTIMEOUT, libmseed_url_connecttimeout) !=
+            CURLE_OK)
+    {
+      ms_log (2, "Cannot set CURLOPT_CONNECTTIMEOUT\n");
+      goto onerror;
+    }
+
+    /* Abort the transfer if it stalls below 1 byte/second, 0 disables */
+    if (libmseed_url_stalltimeout > 0 &&
+        (curl_easy_setopt (io->handle, CURLOPT_LOW_SPEED_LIMIT, 1L) != CURLE_OK ||
+         curl_easy_setopt (io->handle, CURLOPT_LOW_SPEED_TIME, libmseed_url_stalltimeout) !=
+             CURLE_OK))
+    {
+      ms_log (2, "Cannot set CURLOPT_LOW_SPEED_LIMIT and/or CURLOPT_LOW_SPEED_TIME\n");
       goto onerror;
     }
 
@@ -629,6 +671,18 @@ msio_fread (LMIO *io, void *buffer, size_t size)
       else
       {
         rc = select (maxfd + 1, &fdread, &fdwrite, &fdexcep, &timeout);
+
+        /* An interrupted select() is not an error, let libcurl proceed */
+        if (rc < 0 && errno == EINTR)
+        {
+          rc = 0;
+        }
+        else if (rc < 0)
+        {
+          ms_log (2, "Error with select(): %s\n", strerror (errno));
+          io->urlfail = 1;
+          return -1;
+        }
       }
 
       /* Receive data */
@@ -748,6 +802,36 @@ msio_url_useragent (const char *program, const char *version)
 
   return 0;
 } /* End of msio_url_useragent() */
+
+/*********************************************************************
+ * msio_url_timeout:
+ *
+ * Set global connection and stall timeouts, in seconds, for
+ * URL-based IO.  A value of 0 disables the respective timeout and a
+ * negative value leaves it unchanged.
+ *
+ * Returns 0 on success non-zero otherwise.
+ *
+ * @ref MessageOnError - this function logs a message on error
+ *********************************************************************/
+int
+msio_url_timeout (long connecttimeout, long stalltimeout)
+{
+#if !defined(LIBMSEED_URL)
+  (void)connecttimeout; /* Unused */
+  (void)stalltimeout;   /* Unused */
+  ms_log (2, "URL support not included in library\n");
+  return -1;
+#else
+  if (connecttimeout >= 0)
+    libmseed_url_connecttimeout = connecttimeout;
+
+  if (stalltimeout >= 0)
+    libmseed_url_stalltimeout = stalltimeout;
+#endif
+
+  return 0;
+} /* End of msio_url_timeout() */
 
 /*********************************************************************
  * msio_url_userpassword:
