@@ -1157,9 +1157,24 @@ mstl3_writemseed (MS3TraceList *mstl, const char *mspath, int8_t overwrite, int 
   packedrecords = mstl3_pack (mstl, &ms_record_handler_int, ofp, maxreclen, encoding, NULL, flags,
                               verbose, NULL);
 
+  /* The record handler cannot signal a write failure, so flush and check
+   * the stream directly.  A full or read-only filesystem may not surface
+   * an error until buffered data is flushed. */
+  if (packedrecords >= 0 && (fflush (ofp) != 0 || ferror (ofp)))
+  {
+    ms_log (2, "Error writing to output file %s\n", mspath);
+    packedrecords = -1;
+  }
+
   /* Close file and return record count */
   if (ofp != stdout)
-    fclose (ofp);
+  {
+    if (fclose (ofp) != 0 && packedrecords >= 0)
+    {
+      ms_log (2, "Error closing output file %s: %s\n", mspath, strerror (errno));
+      packedrecords = -1;
+    }
+  }
 
   return packedrecords;
 } /* End of mstl3_writemseed() */

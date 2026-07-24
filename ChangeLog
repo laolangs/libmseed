@@ -115,6 +115,9 @@
   - Fix leak of the extra-headers JSON parse state on error returns from the
     v2 blockette loop in msr3_unpack_mseed2(), and avoid orphaning the first
     allocation when a record contains two Blockette 1001s.
+  - Fix mstl3_writemseed() to detect output write, flush, and close
+    failures and return -1 instead of reporting a false success count
+    on a full or read-only filesystem.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.
