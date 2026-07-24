@@ -22,6 +22,7 @@
     segment is now packed completely (MSF_FLUSHDATA implied) the first
     time it is visited, since the trace list is not trimmed and a partial
     record cannot be completed on a later call.
+  - A field was added to the LMIO struct and documented as internal.
 
   Minor fixes, hardening, cleanup:
 
