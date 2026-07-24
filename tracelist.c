@@ -2383,11 +2383,17 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
 
       if (!checkseg)
       {
+        int64_t seg_total_packed = 0;
+
         ms_log (2,
                 "%s: Segment being packed was merged or removed during active packing; "
                 "add data only between records (after a return of 0)\n",
                 packer->current_id ? packer->current_id->sid : "");
-        msr3_pack_free (&packer->seg_packing_state, NULL);
+
+        /* Retain the aborted session's count so the total does not under-report */
+        msr3_pack_free (&packer->seg_packing_state, &seg_total_packed);
+        packer->totalpackedsamples += seg_total_packed;
+
         packer->current_id = NULL;
         packer->current_seg = NULL;
         return -1;

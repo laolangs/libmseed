@@ -2317,6 +2317,7 @@ TEST (pack, mstl3_pack_next_autoheal_merge)
   MS3TraceListPacker *packer = NULL;
   char *record = NULL;
   int32_t reclen = 0;
+  int64_t packedsamples = 0;
   int result = 0;
 
   /* Create integer sine data set */
@@ -2380,6 +2381,8 @@ TEST (pack, mstl3_pack_next_autoheal_merge)
   result = mstl3_pack_next (packer, 0, &record, &reclen);
   CHECK (result == -1, "mstl3_pack_next() did not detect the merged/freed active segment");
 
-  mstl3_pack_free (&packer, NULL);
+  /* The samples emitted before the abort must still be reported */
+  mstl3_pack_free (&packer, &packedsamples);
+  CHECK (packedsamples > 0, "mstl3_pack_free() did not report samples packed before the abort");
   mstl3_free (&mstl, 0);
 }
