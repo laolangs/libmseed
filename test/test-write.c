@@ -1118,6 +1118,70 @@ TEST (pack, mstl3_pack_next_v2)
   mstl3_free (&mstl, 1);
 }
 
+/* Test that mstl3_pack_free() reports samples emitted by a segment packing
+ * session that is still active (i.e. the caller stops after some records
+ * without draining the segment to completion).
+ */
+TEST (pack, mstl3_pack_free_active_session)
+{
+  MS3Record msr = MS3Record_INITIALIZER;
+  MS3Record *rmsr = NULL;
+  MS3TraceList *mstl = NULL;
+  MS3TraceSeg *seg = NULL;
+  int32_t isinedata[SINE_DATA_SAMPLES];
+
+  MS3TraceListPacker *packer = NULL;
+  char *record = NULL;
+  int32_t reclen = 0;
+  int result = 0;
+  int64_t packedsamples = 0;
+  int64_t expectedsamples = 0;
+
+  /* Create integer sine data set */
+  for (int idx = 0; idx < SINE_DATA_SAMPLES; idx++)
+  {
+    isinedata[idx] = (int32_t)(dsinedata[idx]);
+  }
+
+  mstl = mstl3_init (mstl);
+  REQUIRE (mstl != NULL, "mstl3_init() returned unexpected NULL");
+
+  msr.pubversion = 1;
+  msr.datasamples = isinedata;
+  msr.sampletype = 'i';
+  strcpy (msr.sid, "FDSN:XX_TEST__H_H_Z");
+  msr.samprate = 100.0;
+  msr.starttime = ms_timestr2nstime ("2012-05-12T00:00:00.123456789Z");
+  msr.numsamples = SINE_DATA_SAMPLES;
+  msr.samplecnt = msr.numsamples;
+
+  seg = mstl3_addmsr (mstl, &msr, 0, 1, 0, NULL);
+  REQUIRE (seg != NULL, "mstl3_addmsr() returned unexpected NULL");
+
+  /* Small record length forces multiple records for this segment, so the
+   * segment packing session is still active after the first record */
+  packer = mstl3_pack_init (mstl, 128, DE_STEIM1, 0, 0, NULL, 0);
+  REQUIRE (packer != NULL, "mstl3_pack_init() returned unexpected NULL");
+
+  result = mstl3_pack_next (packer, 0, &record, &reclen);
+  REQUIRE (result == 1, "mstl3_pack_next() did not return a record");
+
+  /* Determine the sample count of the emitted record independently, via a
+   * header-only parse, to compare against the count reported on abort */
+  REQUIRE (msr3_parse (record, reclen, &rmsr, 0, 0) == MS_NOERROR,
+           "msr3_parse() failed on packed record");
+  expectedsamples = rmsr->samplecnt;
+  msr3_free (&rmsr);
+
+  /* Abort with the segment packing session still active */
+  mstl3_pack_free (&packer, &packedsamples);
+
+  CHECK (packedsamples == expectedsamples,
+         "Packed samples undercounted on abort with an active segment session");
+
+  mstl3_free (&mstl, 1);
+}
+
 /* Test packing multiple segments with the generator-style interface while a
  * caller-owned (not packer-owned) extra headers buffer is supplied to
  * mstl3_pack_init().

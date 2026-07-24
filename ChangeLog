@@ -116,6 +116,8 @@
   - Fix data-offset overflow in msr3_repack_mseed2() that could hang on
     Steim-encoded input or corrupt non-Steim output when an oversized header
     pushed the data offset past 65535.
+  - Fix mstl3_pack_free() to include samples from an active segment packing
+    session in the returned packed sample count instead of discarding them.
   - Reject a non-positive record length in msr3_repack_mseed2(), avoiding a
     large out-of-bounds write when repacking a record with an unset reclen.
   - Fix leak of the extra-headers JSON parse state on error returns from the

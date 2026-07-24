@@ -1769,8 +1769,7 @@ mstl3_unpack_recordlist (MS3TraceID *id, MS3TraceSeg *seg, void *output, uint64_
   /* Calculate buffer size needed for unpacked samples */
   if (seg->samplecnt < 0 || (uint64_t)seg->samplecnt > SIZE_MAX / samplesize)
   {
-    ms_log (2, "%s: Data buffer size overflow for %" PRId64 " samples\n",
-            id->sid, seg->samplecnt);
+    ms_log (2, "%s: Data buffer size overflow for %" PRId64 " samples\n", id->sid, seg->samplecnt);
     return -1;
   }
 
@@ -2679,7 +2678,10 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
  * pointer to NULL.
  *
  * @param[in] packer Pointer to ::MS3TraceListPacker pointer
- * @param[out] packedsamples Total number of samples packed, returned to caller
+ * @param[out] packedsamples Total number of samples packed, returned to caller.
+ * This includes samples already emitted in records by a segment session that
+ * is still in progress. Such samples are not removed from the trace list,
+ * since that trimming normally happens only when a segment session finishes.
  *
  * @see mstl3_pack_init()
  * @see mstl3_pack_next()
@@ -2690,15 +2692,17 @@ mstl3_pack_free (MS3TraceListPacker **packer, int64_t *packedsamples)
   if (!packer || !*packer)
     return;
 
-  if (packedsamples)
-    *packedsamples = (*packer)->totalpackedsamples;
-
-  /* Free segment packer if still active */
+  /* Fold in samples from an active segment session before reporting */
   if ((*packer)->seg_packing_state)
   {
-    int64_t seg_samples;
+    int64_t seg_samples = 0;
+
     msr3_pack_free (&(*packer)->seg_packing_state, &seg_samples);
+    (*packer)->totalpackedsamples += seg_samples;
   }
+
+  if (packedsamples)
+    *packedsamples = (*packer)->totalpackedsamples;
 
   libmseed_memory.free (*packer);
   *packer = NULL;
