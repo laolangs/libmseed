@@ -401,8 +401,11 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
       /* Determine read size */
       readsize = (MAXRECLEN - msfp->readlength);
 
-      /* Do not read beyond a known end offset */
-      if (msfp->endoffset)
+      /* Do not read beyond a known end offset, for local files only.
+       * URL reads must request at least a curl receive-chunk of data
+       * (see msio_fread()); the end offset is enforced below instead,
+       * once the data has been buffered, via the atrangeend check. */
+      if (msfp->endoffset && msfp->input.type != LMIO_URL)
       {
         int64_t inrange = msfp->endoffset + 1 - (msfp->streampos + MSFPBUFLEN (msfp));
         if (inrange < readsize)
