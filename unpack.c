@@ -1321,26 +1321,33 @@ msr3_unpack_data (MS3Record *msr, int8_t verbose)
   /* (Re)Allocate space for the unpacked data */
   if (unpacksize > 0)
   {
+    void *resized;
+
     if (libmseed_prealloc_block_size)
     {
       size_t current_size = msr->datasize;
-      msr->datasamples = libmseed_memory_prealloc (msr->datasamples, unpacksize, &current_size);
-      msr->datasize = current_size;
+      resized = libmseed_memory_prealloc (msr->datasamples, unpacksize, &current_size);
+
+      if (resized != NULL)
+        msr->datasize = current_size;
     }
     else
     {
-      msr->datasamples = libmseed_memory.realloc (msr->datasamples, unpacksize);
-      msr->datasize = unpacksize;
+      resized = libmseed_memory.realloc (msr->datasamples, unpacksize);
+
+      if (resized != NULL)
+        msr->datasize = unpacksize;
     }
 
-    if (msr->datasamples == NULL)
+    if (resized == NULL)
     {
       ms_log (2, "%s: Cannot (re)allocate memory\n", msr->sid);
-      msr->datasize = 0;
       if (encoded_allocated)
         libmseed_memory.free (encoded_allocated);
       return MS_GENERROR;
     }
+
+    msr->datasamples = resized;
   }
   else
   {

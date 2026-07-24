@@ -109,6 +109,10 @@
   - Fix ms3_readselectionsfile() to reject a 4-field SourceID selection line
     with a non-integer publication version instead of silently misparsing it
     as a network/station/location/channel selection.
+  - Fix msr3_resize_buffer() and msr3_unpack_data() to use a temporary pointer
+    for realloc(), avoiding a leak of the original data buffer and a NULL
+    datasamples pointer left with a non-zero sample count on allocation
+    failure.
   - Fix data-offset overflow in msr3_repack_mseed2() that could hang on
     Steim-encoded input or corrupt non-Steim output when an oversized header
     pushed the data offset past 65535.
