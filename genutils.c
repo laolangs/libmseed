@@ -1879,25 +1879,23 @@ ms_sampletime (nstime_t time, int64_t offset, double samprate)
     span = (nstime_t)spandouble;
   }
 
-  /* Adjust for each leap second contained in the time range, if list is available */
-  if (lslist)
-  {
-    while (lslist)
-    {
-      if (lslist->leapsecond > time && lslist->leapsecond <= (time + span - NSTMODULUS))
-      {
-        span -= NSTMODULUS;
-      }
-
-      lslist = lslist->next;
-    }
-  }
-
-  /* Reject overflow of the final time calculation */
+  /* Reject overflow of the final time calculation before evaluating leap seconds,
+   * so the leap loop's arithmetic cannot overflow */
   if ((span > 0 && time > INT64_MAX - span) || (span < 0 && time < INT64_MIN - span))
   {
     ms_log (2, "Sample time is not representable\n");
     return NSTERROR;
+  }
+
+  /* Adjust for each leap second contained in the time range, if list is available.
+   * The contained test (leapsecond <= time + span - NSTMODULUS) is written in
+   * addition form to avoid overflow of the intermediate expression. */
+  for (; lslist; lslist = lslist->next)
+  {
+    if (lslist->leapsecond > time && lslist->leapsecond + NSTMODULUS <= time + span)
+    {
+      span -= NSTMODULUS;
+    }
   }
 
   return (time + span);
