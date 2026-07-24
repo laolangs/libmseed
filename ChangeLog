@@ -18,7 +18,7 @@
   - Fix invalid free of a caller-owned extra-headers buffer when packing
     multiple trace list segments with mstl3_pack_next().
 
-  Minor fixes and cleanup:
+  Minor fixes, hardening, cleanup:
   - Fix mstl3_pack_next() to re-sync its segment data pointer before packing,
     avoiding a stale pointer when mstl3_addmsr() reallocates the buffer
     between calls, and reject a segment prepend during active packing.
@@ -140,6 +140,8 @@
   - Reject a decoded sample buffer size that overflows size_t in
     mstl3_unpack_recordlist(), avoiding a heap overflow on 32-bit hosts
     when a segment holds close to 4 GiB of samples.
+  - Fix ms_timestr2nstime() to include the input string, instead of an
+    empty string, in the epoch conversion error message.
 
 2026.167: v3.4.1
   - Improve correctness of internal glob matching routines.

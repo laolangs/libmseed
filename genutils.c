@@ -1530,7 +1530,7 @@ ms_timestr2nstime (const char *timestr)
 
     if (fields < 1)
     {
-      ms_log (2, "Could not convert epoch value: '%s'\n", cp);
+      ms_log (2, "Could not convert epoch value: '%s'\n", timestr);
       return NSTERROR;
     }
 
