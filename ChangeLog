@@ -1,4 +1,4 @@
-2026.205:
+2026.205: v3.5.0
   Important fixes and changes:
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
     rolls over, so continuation records and BTIME-encoded blockette times are no
