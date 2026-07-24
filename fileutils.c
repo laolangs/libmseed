@@ -307,6 +307,15 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
   /* Open the stream if needed, use stdin if path is "-" */
   if (msfp->input.handle == NULL)
   {
+    /* Reject a path/URL that will not fit, rather than silently truncating it */
+    if (strlen (mspath) >= sizeof (msfp->path))
+    {
+      ms_log (2, "Path or URL is too long (%zu bytes), maximum is %zu: %s\n",
+              strlen (mspath), sizeof (msfp->path) - 1, mspath);
+      msr3_free (ppmsr);
+      return MS_GENERROR;
+    }
+
     /* Parse and set byte range from path name suffix */
     if (flags & MSF_PNAMERANGE)
     {

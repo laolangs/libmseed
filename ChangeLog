@@ -33,6 +33,8 @@
     before unpausing, since curl_easy_pause() may synchronously invoke the
     write callback and re-pause before the flag is cleared.
   - Detect failed URL transfers instead of reporting them as end-of-file.
+  - Reject a path or URL longer than the internal buffer in ms3_readmsr()
+    instead of silently truncating it and opening the wrong resource.
   - Fix NULL dereference in mstl3_free() when the trace list pointer is NULL.
   - Update MS3TraceID.earliest/latest after packing consumes or removes trace
     segment data so they no longer report stale extents.
