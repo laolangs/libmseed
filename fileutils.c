@@ -1255,8 +1255,8 @@ parse_pathname_range (const char *string, int64_t *start, int64_t *end)
 {
   char startstr[21] = {0}; /* Maximum of 20 digit value */
   char endstr[21] = {0};   /* Maximum of 20 digit value */
-  unsigned long long startval;
-  unsigned long long endval;
+  unsigned long long startval = 0;
+  unsigned long long endval = 0;
   uint8_t startdigits = 0;
   uint8_t enddigits = 0;
   char *dash = NULL;

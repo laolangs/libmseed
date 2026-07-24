@@ -114,8 +114,8 @@ header_callback (char *buffer, size_t size, size_t num, void *userdata)
 
   char startstr[21] = {0}; /* Maximum of 20 digit value */
   char endstr[21] = {0};   /* Maximum of 20 digit value */
-  unsigned long long startval;
-  unsigned long long endval;
+  unsigned long long startval = 0;
+  unsigned long long endval = 0;
   uint8_t startdigits = 0;
   uint8_t enddigits = 0;
   char *dash = NULL;
@@ -160,16 +160,26 @@ header_callback (char *buffer, size_t size, size_t num, void *userdata)
 
     /* Convert start and end values to numbers if non-zero length,
      * rejecting values that overflow a signed 64-bit offset */
-    if (startdigits && (startval = strtoull (startstr, NULL, 10)) > INT64_MAX)
+    if (startdigits)
     {
-      startdigits = 0;
-      enddigits = 0;
+      startval = strtoull (startstr, NULL, 10);
+
+      if (startval > INT64_MAX)
+      {
+        startdigits = 0;
+        enddigits = 0;
+      }
     }
 
-    if (enddigits && (endval = strtoull (endstr, NULL, 10)) > INT64_MAX)
+    if (enddigits)
     {
-      startdigits = 0;
-      enddigits = 0;
+      endval = strtoull (endstr, NULL, 10);
+
+      if (endval > INT64_MAX)
+      {
+        startdigits = 0;
+        enddigits = 0;
+      }
     }
 
     /* The range is only honored if an offset was actually applied */
