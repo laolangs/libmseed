@@ -18,6 +18,8 @@
  * limitations under the License.
  ***************************************************************************/
 
+#include <float.h>
+
 #include "extraheaders.h"
 #include "libmseed.h"
 
@@ -42,6 +44,16 @@ _priv_free (void *ctx, void *ptr)
 {
   UNUSED (ctx);
   libmseed_memory.free (ptr);
+}
+
+/* Mark a real for single-precision serialization, but only when the
+ * value is finite and within the single-precision range so large-magnitude
+ * values keep full precision instead of failing to serialize. */
+static void
+limit_real_precision (yyjson_mut_val *val, double v)
+{
+  if (isfinite (v) && fabs (v) <= (double)FLT_MAX)
+    yyjson_mut_set_fp_to_float (val, true);
 }
 
 /***************************************************************************
@@ -539,6 +551,8 @@ mseh_set_ptr_r (MS3Record *msr, const char *ptr, void *value, char type,
     goto set_new_val;
   case 'n':
     new_val = yyjson_mut_real (parsed->mut_doc, *((double *)value));
+    if (new_val)
+      limit_real_precision (new_val, *((double *)value));
     goto set_new_val;
   case 's':
     new_val = yyjson_mut_strcpy (parsed->mut_doc, (const char *)value);
@@ -690,18 +704,21 @@ mseh_add_event_detection_r (MS3Record *msr, const char *ptr, MSEHEventDetection 
   {
     yyjson_mut_set_str (&sigamp_key, "SignalAmplitude");
     yyjson_mut_set_real (&sigamp, eventdetection->signalamplitude);
+    limit_real_precision (&sigamp, eventdetection->signalamplitude);
     yyjson_mut_obj_add (&entry, &sigamp_key, &sigamp);
   }
   if (eventdetection->signalperiod != 0.0)
   {
     yyjson_mut_set_str (&sigper_key, "SignalPeriod");
     yyjson_mut_set_real (&sigper, eventdetection->signalperiod);
+    limit_real_precision (&sigper, eventdetection->signalperiod);
     yyjson_mut_obj_add (&entry, &sigper_key, &sigper);
   }
   if (eventdetection->backgroundestimate != 0.0)
   {
     yyjson_mut_set_str (&bgest_key, "BackgroundEstimate");
     yyjson_mut_set_real (&bgest, eventdetection->backgroundestimate);
+    limit_real_precision (&bgest, eventdetection->backgroundestimate);
     yyjson_mut_obj_add (&entry, &bgest_key, &bgest);
   }
   if (eventdetection->wave[0])
@@ -896,6 +913,7 @@ mseh_add_calibration_r (MS3Record *msr, const char *ptr, MSEHCalibration *calibr
   {
     yyjson_mut_set_str (&amplitude_key, "Amplitude");
     yyjson_mut_set_real (&amplitude, calibration->amplitude);
+    limit_real_precision (&amplitude, calibration->amplitude);
     yyjson_mut_obj_add (&entry, &amplitude_key, &amplitude);
   }
   if (calibration->inputunits[0])
@@ -914,18 +932,21 @@ mseh_add_calibration_r (MS3Record *msr, const char *ptr, MSEHCalibration *calibr
   {
     yyjson_mut_set_str (&duration_key, "Duration");
     yyjson_mut_set_real (&duration, calibration->duration);
+    limit_real_precision (&duration, calibration->duration);
     yyjson_mut_obj_add (&entry, &duration_key, &duration);
   }
   if (calibration->sineperiod != 0.0)
   {
     yyjson_mut_set_str (&sineperiod_key, "SinePeriod");
     yyjson_mut_set_real (&sineperiod, calibration->sineperiod);
+    limit_real_precision (&sineperiod, calibration->sineperiod);
     yyjson_mut_obj_add (&entry, &sineperiod_key, &sineperiod);
   }
   if (calibration->stepbetween != 0.0)
   {
     yyjson_mut_set_str (&stepbetween_key, "StepBetween");
     yyjson_mut_set_real (&stepbetween, calibration->stepbetween);
+    limit_real_precision (&stepbetween, calibration->stepbetween);
     yyjson_mut_obj_add (&entry, &stepbetween_key, &stepbetween);
   }
   if (calibration->inputchannel[0])
@@ -938,6 +959,7 @@ mseh_add_calibration_r (MS3Record *msr, const char *ptr, MSEHCalibration *calibr
   {
     yyjson_mut_set_str (&refamp_key, "ReferenceAmplitude");
     yyjson_mut_set_real (&refamp, calibration->refamplitude);
+    limit_real_precision (&refamp, calibration->refamplitude);
     yyjson_mut_obj_add (&entry, &refamp_key, &refamp);
     ;
   }
@@ -1025,6 +1047,7 @@ mseh_add_timing_exception_r (MS3Record *msr, const char *ptr, MSEHTimingExceptio
   {
     yyjson_mut_set_str (&vcocorr_key, "VCOCorrection");
     yyjson_mut_set_real (&vcocorr, exception->vcocorrection);
+    limit_real_precision (&vcocorr, exception->vcocorrection);
     yyjson_mut_obj_add (&entry, &vcocorr_key, &vcocorr);
   }
   if (exception->receptionquality >= 0)
@@ -1164,7 +1187,7 @@ mseh_add_recenter_r (MS3Record *msr, const char *ptr, MSEHRecenter *recenter,
 int
 mseh_serialize (MS3Record *msr, LM_PARSED_JSON **parsestate)
 {
-  yyjson_write_flag flg;
+  yyjson_write_flag flg = YYJSON_WRITE_NOFLAG;
   yyjson_write_err err;
   yyjson_alc alc = {_priv_malloc, _priv_realloc, _priv_free, NULL};
 
@@ -1179,10 +1202,6 @@ mseh_serialize (MS3Record *msr, LM_PARSED_JSON **parsestate)
 
   if (!parsed || !parsed->mut_doc)
     return 0;
-
-  /* Limit float point values to single precision to avoid unrealistically
-   * high precision values in the output. */
-  flg = YYJSON_WRITE_FP_TO_FLOAT;
 
   /* Serialize new JSON string */
   serialized = yyjson_mut_write_opts (parsed->mut_doc, flg, &alc, &serialsize, &err);

@@ -67,6 +67,8 @@
   - Fix mseh_get_ptr_r() returning a bit-reinterpreted negative value for type
     'i' requests on extra header integers that are unsigned and out of range
     for int64_t, instead of the wrong-type indicator.
+  - Limit extra-header float precision per-value instead of document-wide, so
+    large or pre-existing values are not lost or rejected.
   - Document that ISO month-day time strings conform to the RFC 3339 profile.
   - Fix negative /FDSN/Time/Correction values rounding toward zero instead of
     to the nearest 100 µs unit when written to miniSEED v2.
