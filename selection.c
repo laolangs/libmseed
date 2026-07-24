@@ -430,7 +430,9 @@ ms3_addselect_comp (MS3Selections **ppselections, char *network, char *station, 
  *
  * In the latter version, the "Pubversion" field, which was "Quality"
  * in earlier versions of the library, is assumed to be a publication
- * version if it is an integer, otherwise it is ignored.
+ * version if it is an integer, otherwise it is ignored.  Since the
+ * fields are positional, a date value in this position is rejected
+ * as an error.
  *
  * @returns Count of selections added on success and -1 on error.
  *
@@ -453,6 +455,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
   int fieldidx;
   uint8_t isstart2;
   uint8_t isend3;
+  uint8_t isdate5;
   uint8_t isstart6;
   uint8_t isend7;
   uint8_t truncated;
@@ -571,6 +574,7 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
 
     isstart2 = (fields[1]) ? ms_globmatch (fields[1], INITDATEGLOB) : 0;
     isend3 = (fields[2]) ? ms_globmatch (fields[2], INITDATEGLOB) : 0;
+    isdate5 = (fields[4]) ? ms_globmatch (fields[4], INITDATEGLOB) : 0;
     isstart6 = (fields[5]) ? ms_globmatch (fields[5], INITDATEGLOB) : 0;
     isend7 = (fields[6]) ? ms_globmatch (fields[6], INITDATEGLOB) : 0;
 
@@ -650,6 +654,15 @@ ms3_readselectionsfile (MS3Selections **ppselections, const char *filename)
     else if (fieldidx == 4 || fieldidx == 5 || (fieldidx == 6 && isstart6) ||
              (fieldidx == 7 && isstart6 && isend7))
     {
+      /* A time value here means the Pubversion field was omitted and the
+       * remaining fields are shifted, which cannot be parsed reliably */
+      if (isdate5)
+      {
+        ms_log (2, "Time value in publication version field (line %d): %s\n",
+                linecount, fields[4]);
+        return -1;
+      }
+
       /* Convert quality field to publication version if integer */
       pubversion = 0;
       if (fields[4] && ms_isinteger (fields[4]))

@@ -66,6 +66,9 @@
     instead of only the first.
   - Fix selection file parsing to reject invalid start/end times instead of
     silently treating them as open-ended selections.
+  - Reject a "Network Station Location Channel" selection line with a date in
+    the Pubversion field instead of silently dropping it and misreading the
+    following Starttime/Endtime fields.
   - Fix sign loss for negative sub-second epoch times (e.g. -0.5) when printing
     and parsing UNIXEPOCH/NANOSECONDEPOCH time strings.
   - Fix FILE* leak on error paths in ms_readleapsecondfile().
