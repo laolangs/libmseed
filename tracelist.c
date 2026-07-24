@@ -2302,8 +2302,10 @@ mstl3_pack_init (MS3TraceList *mstl, int reclen, int8_t encoding, uint32_t flags
  * being packed is not supported and will return -1; in that case the
  * trace list itself is left intact, but samples already emitted in the
  * aborted session have not yet been trimmed from the segment, so a new
- * packer would emit them again as duplicates.  Add data only between
- * calls that return 0 to avoid this.
+ * packer would emit them again as duplicates.  Likewise, adding data that
+ * merges the segment currently being packed into a neighboring segment
+ * (autohealing a gap) is not supported and will also return -1.  Add data
+ * only between calls that return 0 to avoid these cases.
  *
  * @param[in] packer ::MS3TraceListPacker context
  * @param[in] flags Bit flags to control packing:
@@ -2349,6 +2351,28 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
      * reconciled with the in-progress record offset. */
     if (packer->current_seg)
     {
+      /* mstl3_addmsr() may have autohealed a gap by merging current_seg
+       * into a neighboring segment and freeing it, leaving the pointer
+       * dangling.  Confirm it is still linked before dereferencing it;
+       * check by identity only against the (still-valid) trace ID's
+       * segment list, never dereferencing a possibly-freed segment. */
+      MS3TraceSeg *checkseg = packer->current_id ? packer->current_id->first : NULL;
+
+      while (checkseg && checkseg != packer->current_seg)
+        checkseg = checkseg->next;
+
+      if (!checkseg)
+      {
+        ms_log (2,
+                "%s: Segment being packed was merged or removed during active packing; "
+                "add data only between records (after a return of 0)\n",
+                packer->current_id ? packer->current_id->sid : "");
+        msr3_pack_free (&packer->seg_packing_state, NULL);
+        packer->current_id = NULL;
+        packer->current_seg = NULL;
+        return -1;
+      }
+
       if (packer->current_seg->starttime < packer->msr_template.starttime)
       {
         ms_log (2,

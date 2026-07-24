@@ -1908,3 +1908,92 @@ TEST (pack, mstl3_pack_next_rollingbuffer)
 
   mstl3_free (&mstl, 0);
 }
+
+/* Test that mstl3_pack_next() detects the segment it is actively packing
+ * being merged away by an autohealing mstl3_addmsr() call.
+ *
+ * A gap is left between two segments of the same trace ID so that a record
+ * added later, while the second (later) segment is being actively packed,
+ * bridges the gap and autoheals: the segment before absorbs the bridging
+ * record and the actively-packed segment, which is then freed.  Without a
+ * liveness check, the next mstl3_pack_next() call would read the freed
+ * segment; this test confirms it instead reports an error.
+ */
+TEST (pack, mstl3_pack_next_autoheal_merge)
+{
+  MS3Record msr = MS3Record_INITIALIZER;
+  MS3TraceList *mstl = NULL;
+  MS3TraceSeg *seg = NULL;
+  uint32_t flags = 0;
+  int32_t isinedata[SINE_DATA_SAMPLES];
+  nstime_t starttime = ms_timestr2nstime ("2012-05-12T00:00:00.0Z");
+
+  MS3TraceListPacker *packer = NULL;
+  char *record = NULL;
+  int32_t reclen = 0;
+  int result = 0;
+
+  /* Create integer sine data set */
+  for (int idx = 0; idx < SINE_DATA_SAMPLES; idx++)
+  {
+    isinedata[idx] = (int32_t)(dsinedata[idx]);
+  }
+
+  mstl = mstl3_init (mstl);
+  REQUIRE (mstl != NULL, "mstl3_init() returned unexpected NULL");
+
+  /* Common record parameters */
+  msr.pubversion = 1;
+  msr.datasamples = isinedata;
+  msr.sampletype = 'i';
+  strcpy (msr.sid, "FDSN:XX_TEST__H_H_Z");
+  msr.samprate = 1.0;
+
+  /* Leading segment, short enough to never produce a full record on its own */
+  msr.starttime = starttime;
+  msr.numsamples = 2;
+  msr.samplecnt = msr.numsamples;
+
+  seg = mstl3_addmsr (mstl, &msr, 0, 1, flags, NULL);
+  REQUIRE (seg != NULL, "mstl3_addmsr() returned unexpected NULL");
+
+  /* Trailing segment, separated by a gap and large enough to require
+   * multiple records, so it remains the actively-packed segment across
+   * mstl3_pack_next() calls */
+  msr.starttime = ms_sampletime (starttime, 5, msr.samprate);
+  msr.numsamples = SINE_DATA_SAMPLES;
+  msr.samplecnt = msr.numsamples;
+
+  seg = mstl3_addmsr (mstl, &msr, 0, 1, flags, NULL);
+  REQUIRE (seg != NULL, "mstl3_addmsr() returned unexpected NULL");
+
+  /* Initialize the packing context and pack a first record from the
+   * trailing segment; the leading segment is too short to emit a record
+   * without flushing and is skipped over within the same call */
+  packer = mstl3_pack_init (mstl, 512, DE_INT32, flags, 0, NULL, 0);
+  REQUIRE (packer != NULL, "mstl3_pack_init() returned unexpected NULL");
+
+  result = mstl3_pack_next (packer, 0, &record, &reclen);
+  REQUIRE (result == 1, "mstl3_pack_next() did not produce an expected first record");
+
+  /* Bridge the gap between the two segments; with autohealing this merges
+   * the actively-packed (trailing) segment into the leading segment and
+   * frees it */
+  msr.starttime = ms_sampletime (starttime, 2, msr.samprate);
+  msr.numsamples = 3;
+  msr.samplecnt = msr.numsamples;
+
+  seg = mstl3_addmsr (mstl, &msr, 0, 1, flags, NULL);
+  REQUIRE (seg != NULL, "mstl3_addmsr() returned unexpected NULL");
+
+  CHECK (mstl->traces.next[0]->numsegments == 1,
+         "Expected autoheal to merge the trace ID down to a single segment");
+
+  /* The packer's active segment was just freed by the merge above; this
+   * must be detected and reported rather than dereferenced */
+  result = mstl3_pack_next (packer, 0, &record, &reclen);
+  CHECK (result == -1, "mstl3_pack_next() did not detect the merged/freed active segment");
+
+  mstl3_pack_free (&packer, NULL);
+  mstl3_free (&mstl, 0);
+}
