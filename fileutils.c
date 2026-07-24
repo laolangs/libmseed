@@ -310,8 +310,8 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
     /* Reject a path/URL that will not fit, rather than silently truncating it */
     if (strlen (mspath) >= sizeof (msfp->path))
     {
-      ms_log (2, "Path or URL is too long (%zu bytes), maximum is %zu: %s\n",
-              strlen (mspath), sizeof (msfp->path) - 1, mspath);
+      ms_log (2, "Path or URL is too long (%zu bytes), maximum is %zu: %s\n", strlen (mspath),
+              sizeof (msfp->path) - 1, mspath);
       msr3_free (ppmsr);
       return MS_GENERROR;
     }
@@ -320,6 +320,15 @@ _ms3_readmsr_impl (MS3FileParam **ppmsfp, MS3Record **ppmsr, const char *mspath,
     if (flags & MSF_PNAMERANGE)
     {
       pathname_range = parse_pathname_range (mspath, &msfp->startoffset, &msfp->endoffset);
+    }
+
+    /* Reject a negative start or end offset, whether parsed above or set
+     * directly by a caller on the MS3FileParam fields for advanced usage */
+    if (msfp->startoffset < 0 || msfp->endoffset < 0)
+    {
+      ms_log (2, "Invalid negative byte range offset for %s\n", mspath);
+      msr3_free (ppmsr);
+      return MS_GENERROR;
     }
 
     /* Store the path */
@@ -1208,6 +1217,8 @@ parse_pathname_range (const char *string, int64_t *start, int64_t *end)
 {
   char startstr[21] = {0}; /* Maximum of 20 digit value */
   char endstr[21] = {0};   /* Maximum of 20 digit value */
+  unsigned long long startval;
+  unsigned long long endval;
   uint8_t startdigits = 0;
   uint8_t enddigits = 0;
   char *dash = NULL;
@@ -1250,12 +1261,29 @@ parse_pathname_range (const char *string, int64_t *start, int64_t *end)
     if (!startdigits && !enddigits)
       return NULL;
 
-    /* Convert start and end values to numbers if non-zero length */
+    /* Convert start and end values to numbers if non-zero length,
+     * rejecting values that overflow a signed 64-bit offset */
+    if (startdigits)
+    {
+      startval = strtoull (startstr, NULL, 10);
+
+      if (startval > INT64_MAX)
+        return NULL;
+    }
+
+    if (enddigits)
+    {
+      endval = strtoull (endstr, NULL, 10);
+
+      if (endval > INT64_MAX)
+        return NULL;
+    }
+
     if (start && startdigits)
-      *start = (int64_t)strtoull (startstr, NULL, 10);
+      *start = (int64_t)startval;
 
     if (end && enddigits)
-      *end = (int64_t)strtoull (endstr, NULL, 10);
+      *end = (int64_t)endval;
   }
 
   return at;

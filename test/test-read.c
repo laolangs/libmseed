@@ -426,11 +426,42 @@ TEST (read, byterange)
   ms3_readmsr(&msr, NULL, flags, 0);
 
   /* Read byte range 9428-9967 from V2 format file */
-  rv = ms3_readmsr (&msr, "data/testdata-oneseries-mixedlengths-mixedorder.mseed2@9344-9855", flags, 0);
+  rv = ms3_readmsr (&msr, "data/testdata-oneseries-mixedlengths-mixedorder.mseed2@9344-9855", flags,
+                    0);
   REQUIRE (rv == MS_NOERROR, "ms3_readmsr() did not return expected MS_NOERROR");
   CHECK (msr->numsamples == 112, "Byte range read, unexpected number of decoded samples");
   CHECK (msr->starttime == nstime, "Byte range read, unexpected record start time");
-  ms3_readmsr(&msr, NULL, flags, 0);
+  ms3_readmsr (&msr, NULL, flags, 0);
+
+  /* Suppress error messages by accumulating them */
+  ms_rloginit (NULL, NULL, NULL, NULL, 10);
+
+  /* A start or end value beyond INT64_MAX must not wrap to a negative
+   * offset; the suffix is left unrecognized as a range and the open fails */
+  rv = ms3_readmsr (&msr,
+                    "data/testdata-oneseries-mixedlengths-mixedorder.mseed3@-9999999999999999999",
+                    flags, 0);
+  CHECK (rv == MS_GENERROR,
+         "ms3_readmsr() did not return expected MS_GENERROR for oversized end offset");
+  ms3_readmsr (&msr, NULL, flags, 0);
+
+  rv = ms3_readmsr (&msr,
+                    "data/testdata-oneseries-mixedlengths-mixedorder.mseed3@9999999999999999999-",
+                    flags, 0);
+  CHECK (rv == MS_GENERROR,
+         "ms3_readmsr() did not return expected MS_GENERROR for oversized start offset");
+  ms3_readmsr (&msr, NULL, flags, 0);
+
+  /* INT64_MAX itself is still a valid start offset, so the range is
+   * accepted and the file is opened and seeked; reading then finds no
+   * data beyond the offset rather than the range being rejected outright
+   * as a malformed pattern */
+  rv = ms3_readmsr (&msr,
+                    "data/testdata-oneseries-mixedlengths-mixedorder.mseed3@9223372036854775807-",
+                    flags, 0);
+  CHECK (rv == MS_NOTSEED,
+         "ms3_readmsr() did not return expected MS_NOTSEED for boundary start offset");
+  ms3_readmsr (&msr, NULL, flags, 0);
 }
 
 TEST (read, byterange_init)

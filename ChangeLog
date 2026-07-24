@@ -29,6 +29,9 @@
   - Fail when an HTTP server ignores a requested byte Range and returns the
     full body, instead of silently relabeling the start offset and returning
     records outside the requested range.
+  - Reject byte range values above INT64_MAX in path name suffixes and HTTP
+    Content-Range headers, and reject a negative start or end offset when
+    opening a stream, instead of silently wrapping to a negative offset.
   - Fix possible infinite loop in msio_fread() by clearing the curl pause flag
     before unpausing, since curl_easy_pause() may synchronously invoke the
     write callback and re-pause before the flag is cleared.
