@@ -1300,7 +1300,20 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
 
   if (yyjson_ptr_get_num (ehroot, "/FDSN/Time/Correction", &header_number))
   {
-    *pMS2FSDH_TIMECORRECT (record) = HO4d ((int32_t)llround (header_number * 10000), swapflag);
+    /* Time correction is stored in 0.0001 second units, round-to-nearest w/ ties away from zero */
+    double correction = header_number * 10000.0;
+
+    correction += (correction < 0.0) ? -0.5 : 0.5;
+
+    if (!isfinite (correction) || correction <= (double)INT32_MIN - 1.0 ||
+        correction >= (double)INT32_MAX + 1.0)
+    {
+      ms_log (2, "%s: Time correction is not representable: %g\n", msr->sid, header_number);
+      yyjson_doc_free (ehdoc);
+      return -1;
+    }
+
+    *pMS2FSDH_TIMECORRECT (record) = HO4d ((int32_t)correction, swapflag);
 
     /* Set time correction applied bit in activity flags.
        Rationale: V3 records do not allow unapplied time corrections and unapplied
@@ -1344,7 +1357,13 @@ msr3_pack_header2_offsets (const MS3Record *msr, char *record, uint32_t recbufle
   {
     double units = 10000.0 / sampratehz; /* 100 usec units per sample */
 
-    offgrid_possible = (fabs (units - round (units)) > 1.0e-6);
+    /* Test for a fractional part, values of 2^53 and larger are always integers */
+    if (units < 9.0e15)
+    {
+      double fraction = units - (double)(int64_t)units;
+
+      offgrid_possible = (fraction > 1.0e-6 && fraction < (1.0 - 1.0e-6));
+    }
   }
 
   if (yyjson_ptr_get_uint (ehroot, "/FDSN/Time/Quality", &header_uint) || usec_offset ||

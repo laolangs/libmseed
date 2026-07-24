@@ -2181,7 +2181,7 @@ lm_packed_starttime (const MS3TraceSeg *seg, int64_t packedsamples)
                                                   : (double)NSTMODULUS * -seg->samprate;
 
     if (MS_ISRATETOLERABLE (apparent_period, nominal_period))
-      return seg->starttime + (nstime_t)llround ((double)packedsamples * apparent_period);
+      return seg->starttime + (nstime_t)((double)packedsamples * apparent_period + 0.5);
   }
 
   return ms_sampletime (seg->starttime, packedsamples, seg->samprate);
