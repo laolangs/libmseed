@@ -2441,19 +2441,20 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       /* If MSF_MAINTAINMSTL not set, update segment data buffer: remove packed samples */
       if ((packer->flags & MSF_MAINTAINMSTL) == 0 && seg_total_packed > 0 && packer->current_seg)
       {
-        /* Calculate new start time, shortcut when all samples have been packed */
-        if (seg_total_packed == packer->current_seg->numsamples)
-          packer->current_seg->starttime = packer->current_seg->endtime;
-        else
-          packer->current_seg->starttime =
-              lm_packed_starttime (packer->current_seg, seg_total_packed);
-
+        /* Determine sample size before modifying the segment to avoid a partial update */
         samplesize = ms_samplesize (packer->current_seg->sampletype);
         if (!samplesize)
         {
           ms_log (2, "Unknown sample size for sample type: %c\n", packer->current_seg->sampletype);
           return -1;
         }
+
+        /* Calculate new start time, shortcut when all samples have been packed */
+        if (seg_total_packed == packer->current_seg->numsamples)
+          packer->current_seg->starttime = packer->current_seg->endtime;
+        else
+          packer->current_seg->starttime =
+              lm_packed_starttime (packer->current_seg, seg_total_packed);
 
         packer->current_seg->samplecnt -= seg_total_packed;
         packer->current_seg->numsamples -= seg_total_packed;
@@ -2887,17 +2888,18 @@ mstl3_pack_segment (MS3TraceList *mstl, MS3TraceID *id, MS3TraceSeg *seg,
   /* If MSF_MAINTAINMSTL not set, modify or remove segment accordingly */
   if ((flags & MSF_MAINTAINMSTL) == 0 && segpackedsamples > 0)
   {
-    /* Calculate new start time, shortcut when all samples have been packed */
-    if (segpackedsamples == seg->numsamples)
-      seg->starttime = seg->endtime;
-    else
-      seg->starttime = lm_packed_starttime (seg, segpackedsamples);
-
+    /* Determine sample size before modifying the segment to avoid a partial update */
     if (!(samplesize = ms_samplesize (seg->sampletype)))
     {
       ms_log (2, "Unknown sample size for sample type: %c\n", seg->sampletype);
       return -1;
     }
+
+    /* Calculate new start time, shortcut when all samples have been packed */
+    if (segpackedsamples == seg->numsamples)
+      seg->starttime = seg->endtime;
+    else
+      seg->starttime = lm_packed_starttime (seg, segpackedsamples);
 
     seg->samplecnt -= segpackedsamples;
     seg->numsamples -= segpackedsamples;
