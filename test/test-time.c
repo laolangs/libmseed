@@ -131,6 +131,22 @@ TEST (time, timestr2nstime)
   nstime = ms_timestr2nstime ("+9223372036.5");
   CHECK (nstime == 9223372036500000000, "Failed to convert time string: '+9223372036.5'");
 
+  /* On the epoch time scale a leap second is a repeat of the second that
+   * follows it, so 2016-12-31T23:59:60 is 2017-01-01T00:00:00 and a fraction
+   * that rounds up to a full second carries to 2017-01-01T00:00:01. */
+  nstime = ms_timestr2nstime ("2016-12-31T23:59:60");
+  CHECK (nstime == 1483228800000000000, "Failed to convert time string: '2016-12-31T23:59:60'");
+
+  nstime = ms_timestr2nstime ("2016-12-31T23:59:60.9999999999");
+  CHECK (nstime == 1483228801000000000, "Failed to convert time string: '2016-12-31T23:59:60.9999999999'");
+
+  nstime = ms_timestr2nstime ("2016,366,23,59,60.9999999999");
+  CHECK (nstime == 1483228801000000000, "Failed to convert time string: '2016,366,23,59,60.9999999999'");
+
+  /* A fraction that rounds up to a full second on a non-leap second */
+  nstime = ms_timestr2nstime ("2016-12-31T23:59:59.9999999999");
+  CHECK (nstime == 1483228800000000000, "Failed to convert time string: '2016-12-31T23:59:59.9999999999'");
+
   /* Parsing error tests */
   nstime = ms_timestr2nstime ("this is not a time string");
   CHECK (nstime == NSTERROR, "Failed to produce error for time string: 'this is not a time string'");

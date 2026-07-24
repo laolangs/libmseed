@@ -1639,6 +1639,7 @@ ms_mdtimestr2nstime (const char *timestr)
   int hour = 0;
   int min = 0;
   int sec = 0;
+  int carry = 0;
   char fracstr[16] = "";
   uint32_t nsec = 0;
 
@@ -1655,11 +1656,11 @@ ms_mdtimestr2nstime (const char *timestr)
   {
     nsec = ms_frac2nsec (fracstr);
 
-    /* Carry a fractional second that rounds up to a full second */
+    /* A fractional second that rounds up to a full second is carried */
     if (nsec >= 1000000000)
     {
       nsec = 0;
-      sec += 1;
+      carry = 1;
     }
   }
 
@@ -1717,7 +1718,7 @@ ms_mdtimestr2nstime (const char *timestr)
     return NSTERROR;
   }
 
-  return ms_time2nstime_int (year, yday, hour, min, sec, nsec);
+  return ms_time2nstime_int (year, yday, hour, min, sec + carry, nsec);
 } /* End of ms_mdtimestr2nstime() */
 
 /** ************************************************************************
@@ -1750,6 +1751,7 @@ ms_seedtimestr2nstime (const char *seedtimestr)
   int hour = 0;
   int min = 0;
   int sec = 0;
+  int carry = 0;
   char fracstr[16] = "";
   uint32_t nsec = 0;
 
@@ -1766,11 +1768,11 @@ ms_seedtimestr2nstime (const char *seedtimestr)
   {
     nsec = ms_frac2nsec (fracstr);
 
-    /* Carry a fractional second that rounds up to a full second */
+    /* A fractional second that rounds up to a full second is carried */
     if (nsec >= 1000000000)
     {
       nsec = 0;
-      sec += 1;
+      carry = 1;
     }
   }
 
@@ -1816,7 +1818,7 @@ ms_seedtimestr2nstime (const char *seedtimestr)
     return NSTERROR;
   }
 
-  return ms_time2nstime_int (year, yday, hour, min, sec, nsec);
+  return ms_time2nstime_int (year, yday, hour, min, sec + carry, nsec);
 } /* End of ms_seedtimestr2nstime() */
 
 /** ************************************************************************
