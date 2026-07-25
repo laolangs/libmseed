@@ -10,6 +10,9 @@
   - Add msr3_duplicate_extra() to allow independent control of extra header
     duplication, with msr3_duplicate() now a thin wrapper that preserves its
     original always-copy behavior.
+  - Export ms3_msfp_init(), msr3_duplicate_extra(), ms_rlog_pop() and
+    libmseed_memory_prealloc() in libmseed.def, so they are available from
+    Windows DLL builds as they already are elsewhere.
 
 2026.205: v3.5.0
   Important fixes and changes:
