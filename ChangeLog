@@ -1,3 +1,10 @@
+2026.206:
+  - Accept a /FDSN/Calibration/Sequence/Type of ABORT when packing miniSEED v2,
+    so a Blockette 395 read from a v2 record can be written back out.
+  - Reject a /FDSN/Calibration/Sequence with a missing or non-string /EndTime
+    when a Blockette 395 is the only representation, instead of silently
+    writing no blockette.
+
 2026.205: v3.5.0
   Important fixes and changes:
   - Fix v2 miniSEED time encoding to use the carried second when 100 µs rounding
