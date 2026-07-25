@@ -7,6 +7,9 @@
   - Reject a /FDSN/Calibration/Sequence with a missing or non-string /EndTime
     when a Blockette 395 is the only representation, instead of silently
     writing no blockette.
+  - Add msr3_duplicate_extra() to allow independent control of extra header
+    duplication, with msr3_duplicate() now a thin wrapper that preserves its
+    original always-copy behavior.
 
 2026.205: v3.5.0
   Important fixes and changes:

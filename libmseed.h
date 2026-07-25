@@ -454,6 +454,7 @@ extern int64_t ms_decode_data (const void *input, uint64_t inputsize, uint8_t en
 extern MS3Record *msr3_init (MS3Record *msr);
 extern void msr3_free (MS3Record **ppmsr);
 extern MS3Record *msr3_duplicate (const MS3Record *msr, int8_t datadup);
+extern MS3Record *msr3_duplicate_extra (const MS3Record *msr, int8_t datadup, int8_t extradup);
 extern nstime_t msr3_endtime (const MS3Record *msr);
 extern void msr3_print (const MS3Record *msr, int8_t details);
 extern int msr3_resize_buffer (MS3Record *msr);
