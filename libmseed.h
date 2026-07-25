@@ -532,7 +532,10 @@ extern void ms3_printselections (const MS3Selections *selections);
  * the file name remains valid for the lifetime of the record list.
  *
  * A ::MS3Record is stored with and contains the bit flags, extra
- * headers, etc. for the record.
+ * headers, etc. for the record.  The raw record pointer (\a
+ * MS3Record.record) is only populated when the record remains
+ * available in a caller-supplied buffer; it is NULL otherwise, for
+ * example for records read from files.
  *
  * The \a dataoffset to the encoded data is stored to enable direct
  * decoding of data samples without re-parsing the header, used by
@@ -549,7 +552,7 @@ typedef struct MS3RecordPtr
   FILE *fileptr;         //!< Pointer to open FILE containing record, NULL if not used
   const char *filename;  //!< Pointer (borrowed) to file name containing record, NULL if not used
   int64_t fileoffset;    //!< Offset into file to record for \a fileptr or \a filename
-  MS3Record *msr;        //!< Pointer to ::MS3Record for this record
+  MS3Record *msr;        //!< Pointer to ::MS3Record for this record, \a msr->record is only valid if from a caller-supplied buffer
   nstime_t endtime;      //!< End time of record, time of last sample
   uint32_t dataoffset;   //!< Offset from start of record to encoded data
   void *prvtptr;         //!< Private pointer, will not be populated by library but will be free'd
