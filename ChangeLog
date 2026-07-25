@@ -1,4 +1,4 @@
-2026.206:
+2026.206: v3.5.1
   - Set MS3RecordPtr.msr->record to NULL when the raw record is not available,
     instead of leaving it dangling to a source buffer that may be freed or
     reused.
