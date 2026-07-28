@@ -1710,6 +1710,9 @@ ms2_blktdesc (uint16_t blkttype)
   case 400:
     return "Beam";
     break;
+  case 405:
+    return "Beam Delay";
+    break;
   case 500:
     return "Timing";
     break;
@@ -1767,6 +1770,9 @@ ms2_blktlen (uint16_t blkttype, const char *blkt, int8_t swapflag)
     break;
   case 400: /* Beam */
     blktlen = 16;
+    break;
+  case 405: /* Beam Delay */
+    blktlen = 6;
     break;
   case 500: /* Timing */
     blktlen = 200;

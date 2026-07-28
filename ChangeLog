@@ -3,6 +3,9 @@
     MS3RecordList entries when building a record list.
   - Reject sample count that would overflow size_t when converting to
     doubles in mstl3_convertsamples(), avoiding undersized malloc on 32-bit.
+  - Break ms_parse_raw2() blockette walk on unknown length, treat a
+    self-referential next offset as fatal, and add Blockette 405 length
+    to ms2_blktlen() so diagnostic parsing cannot hang.
 
   2026.206: v3.5.1
   - Set MS3RecordPtr.msr->record to NULL when the raw record is not available,

@@ -850,6 +850,7 @@ ms_parse_raw2 (const char *record, int maxreclen, int8_t details, int8_t swapfla
       {
         ms_log (2, "%s: Unknown blockette length for type %d\n", sid, blkt_type);
         retval++;
+        break;
       }
 
       /* Track end of blockette chain */
@@ -1397,7 +1398,7 @@ ms_parse_raw2 (const char *record, int maxreclen, int8_t details, int8_t swapfla
       }
 
       /* Sanity check the next blockette offset */
-      if (next_blkt && next_blkt <= endofblockettes)
+      if (next_blkt && (next_blkt == blkt_offset || next_blkt <= endofblockettes))
       {
         ms_log (2, "%s: Next blockette offset (%d) is within current blockette ending at byte %d\n",
                 sid, next_blkt, endofblockettes);
