@@ -1,12 +1,11 @@
-2026.208:
+2026.208: v3.5.2
   - Add MSF_RECORDLIST_NOEXTRAS to skip copying extra headers into
     MS3RecordList entries when building a record list.
+  - Reject a blockette offset within the fixed header as fatal.
+  - Break ms_parse_raw2() blockette walk on unknown length, treat a
+    self-referential next offset as fatal, add Blockette 405 length.
   - Reject sample count that would overflow size_t when converting to
     doubles in mstl3_convertsamples(), avoiding undersized malloc on 32-bit.
-  - Break ms_parse_raw2() blockette walk on unknown length, treat a
-    self-referential next offset as fatal, and add Blockette 405 length
-    to ms2_blktlen() so diagnostic parsing cannot hang.
-  - Reject a blockette offset within the fixed header as fatal.
   - Reject size_t overflow in libmseed_memory_prealloc() growth loop,
     avoiding an infinite hang on huge allocation requests.
   - Free duplicated MS3Record when record-list entry allocation fails.

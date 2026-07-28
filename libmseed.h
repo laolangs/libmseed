@@ -29,8 +29,8 @@ extern "C"
 {
 #endif
 
-#define LIBMSEED_VERSION "3.5.1"    //!< Library version
-#define LIBMSEED_RELEASE "2026.206" //!< Library release date
+#define LIBMSEED_VERSION "3.5.2"    //!< Library version
+#define LIBMSEED_RELEASE "2026.208" //!< Library release date
 
 /** @defgroup io-functions File and URL I/O */
 /** @defgroup miniseed-record Record Handling */
