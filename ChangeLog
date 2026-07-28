@@ -6,9 +6,7 @@
   - Break ms_parse_raw2() blockette walk on unknown length, treat a
     self-referential next offset as fatal, and add Blockette 405 length
     to ms2_blktlen() so diagnostic parsing cannot hang.
-  - Abort msr3_unpack_mseed2() on truncated blockette walks (or skip an
-    unknown-length blockette only via an advancing in-bounds next offset)
-    so encoding cannot remain unset and decode as Steim-1 by mistake.
+  - Reject a blockette offset within the fixed header as fatal.
   - Reject size_t overflow in libmseed_memory_prealloc() growth loop,
     avoiding an infinite hang on huge allocation requests.
   - Free duplicated MS3Record when record-list entry allocation fails.

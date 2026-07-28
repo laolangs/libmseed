@@ -235,7 +235,8 @@ ms3_detect (const char *record, uint64_t recbuflen, uint8_t *formatversion)
 
     /* Loop through blockettes as long as number is non-zero and the 4-byte
      * blockette header (type and next offset) is fully within the buffer */
-    while (blkt_offset != 0 && blkt_offset > 47 && (uint64_t)blkt_offset + 4 <= recbuflen)
+    while (blkt_offset != 0 && blkt_offset >= MS2FSDH_LENGTH &&
+           (uint64_t)blkt_offset + 4 <= recbuflen)
     {
       memcpy (&blkt_type, record + blkt_offset, 2);
       memcpy (&next_blkt, record + blkt_offset + 2, 2);

@@ -456,6 +456,14 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
 
   while ((blkt_offset != 0) && ((blkt_offset + 4) <= reclen) && (blkt_offset < MAXRECLEN))
   {
+    /* Reject an offset within the fixed section of the header */
+    if (blkt_offset < MS2FSDH_LENGTH)
+    {
+      ms_log (2, "%s: Blockette offset (%d) is within the fixed header, impossible\n", msr->sid,
+              blkt_offset);
+      goto error_return;
+    }
+
     /* Every blockette has a similar 4 byte header: type and next */
     memcpy (&blkt_type, record + blkt_offset, 2);
     memcpy (&next_blkt, record + blkt_offset + 2, 2);
@@ -482,8 +490,12 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
     {
       ms_log (2, "%s: Unknown blockette length for type %d\n", msr->sid, blkt_type);
 
+      /* A terminated blockette chain with unknown blockette stops here */
+      if (next_blkt == 0)
+        break;
+
       /* Skip via next offset only when it advances and stays in-bounds */
-      if (next_blkt > blkt_offset && next_blkt <= reclen)
+      if (next_blkt > blkt_offset && next_blkt >= MS2FSDH_LENGTH && next_blkt <= reclen)
       {
         blkt_offset = next_blkt;
         blkt_count++;
