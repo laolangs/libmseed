@@ -1408,6 +1408,7 @@ lm_add_recordptr (MS3TraceSeg *seg, const MS3Record *msr, nstime_t endtime, int8
     if (seg->recordlist == NULL)
     {
       ms_log (2, "Cannot allocate memory\n");
+      msr3_free (&recordptr->msr);
       libmseed_memory.free (recordptr);
       return NULL;
     }
