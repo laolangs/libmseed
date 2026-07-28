@@ -1621,7 +1621,17 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
   /* Convert to 64-bit doubles */
   else if (type == 'd')
   {
-    if (!(ddata = (double *)libmseed_memory.malloc ((size_t)(seg->numsamples * sizeof (double)))))
+    size_t datasize;
+
+    if (seg->numsamples < 0 || (uint64_t)seg->numsamples > SIZE_MAX / sizeof (double))
+    {
+      ms_log (2, "Data buffer size overflow for %" PRId64 " samples\n", seg->numsamples);
+      return -1;
+    }
+
+    datasize = (size_t)seg->numsamples * sizeof (double);
+
+    if (!(ddata = (double *)libmseed_memory.malloc (datasize)))
     {
       ms_log (2, "Cannot allocate buffer for sample conversion to doubles\n");
       return -1;
@@ -1643,7 +1653,7 @@ mstl3_convertsamples (MS3TraceSeg *seg, char type, int8_t truncate)
     }
 
     seg->datasamples = ddata;
-    seg->datasize = seg->numsamples * sizeof (double);
+    seg->datasize = datasize;
     seg->sampletype = 'd';
   } /* Done converting to 64-bit doubles */
 
