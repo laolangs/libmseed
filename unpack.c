@@ -472,7 +472,7 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
     {
       ms_log (2, "%s: Blockette 2000 length field extends beyond record size, truncated?\n",
               msr->sid);
-      break;
+      goto error_return;
     }
 
     /* Get blockette length */
@@ -481,14 +481,23 @@ msr3_unpack_mseed2 (const char *record, int reclen, MS3Record **ppmsr, uint32_t 
     if (blkt_length == 0)
     {
       ms_log (2, "%s: Unknown blockette length for type %d\n", msr->sid, blkt_type);
-      break;
+
+      /* Skip via next offset only when it advances and stays in-bounds */
+      if (next_blkt > blkt_offset && next_blkt <= reclen)
+      {
+        blkt_offset = next_blkt;
+        blkt_count++;
+        continue;
+      }
+
+      goto error_return;
     }
 
     /* Make sure blockette is contained within the msrecord buffer */
     if ((blkt_offset + blkt_length) > reclen)
     {
       ms_log (2, "%s: Blockette %d extends beyond record size, truncated?\n", msr->sid, blkt_type);
-      break;
+      goto error_return;
     }
 
     blkt_end = blkt_offset + blkt_length;
@@ -1287,7 +1296,7 @@ msr3_unpack_data (MS3Record *msr, int8_t verbose)
     return MS_GENERROR;
   }
 
-  /* Fallback encoding for when encoding is unknown */
+  /* Fallback encoding for when encoding is unknown (legacy bare SEED data records) */
   if (msr->encoding < 0)
   {
     if (verbose > 2)

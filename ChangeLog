@@ -6,6 +6,9 @@
   - Break ms_parse_raw2() blockette walk on unknown length, treat a
     self-referential next offset as fatal, and add Blockette 405 length
     to ms2_blktlen() so diagnostic parsing cannot hang.
+  - Abort msr3_unpack_mseed2() on truncated blockette walks (or skip an
+    unknown-length blockette only via an advancing in-bounds next offset)
+    so encoding cannot remain unset and decode as Steim-1 by mistake.
 
   2026.206: v3.5.1
   - Set MS3RecordPtr.msr->record to NULL when the raw record is not available,
