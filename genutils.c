@@ -59,9 +59,16 @@ libmseed_memory_prealloc (void *ptr, size_t size, size_t *currentsize)
     return ptr;
 
   /* Calculate new size needed for request by adding blocks */
+  if (*currentsize > SIZE_MAX - libmseed_prealloc_block_size)
+    return NULL;
+
   newsize = *currentsize + libmseed_prealloc_block_size;
   while (newsize < size)
+  {
+    if (newsize > SIZE_MAX - libmseed_prealloc_block_size)
+      return NULL;
     newsize += libmseed_prealloc_block_size;
+  }
 
   newptr = libmseed_memory.realloc (ptr, newsize);
 

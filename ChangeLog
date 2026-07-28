@@ -9,6 +9,8 @@
   - Abort msr3_unpack_mseed2() on truncated blockette walks (or skip an
     unknown-length blockette only via an advancing in-bounds next offset)
     so encoding cannot remain unset and decode as Steim-1 by mistake.
+  - Reject size_t overflow in libmseed_memory_prealloc() growth loop,
+    avoiding an infinite hang on huge allocation requests.
 
   2026.206: v3.5.1
   - Set MS3RecordPtr.msr->record to NULL when the raw record is not available,
