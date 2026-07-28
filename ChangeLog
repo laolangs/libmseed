@@ -12,6 +12,7 @@
   - Reject size_t overflow in libmseed_memory_prealloc() growth loop,
     avoiding an infinite hang on huge allocation requests.
   - Free duplicated MS3Record when record-list entry allocation fails.
+  - Reject out-of-range leap-second epochs in ms_readleapsecondfile().
 
   2026.206: v3.5.1
   - Set MS3RecordPtr.msr->record to NULL when the raw record is not available,
