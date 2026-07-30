@@ -512,61 +512,100 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
       segbefore = NULL; /* The first segment end that matches the record start (within tolerance) */
       segafter = NULL;  /* The first segment start that matches the record end (within tolerance) */
       followseg = NULL; /* The segment with latest start time before the record start */
-      searchseg = id->first;
-      while (searchseg)
+
+      /* A zero rate record cannot match segbefore/segafter without an explicit
+       * tolerance, so only followseg is needed: search backward from the last segment. */
+      if (sampratehz == 0.0 && sampratetol < 0.0)
       {
-        /* Done searching when segment starts beyond the record end plus tolerance */
-        if (searchseg->starttime > endtime + nsperiod + nstimetol)
-          break;
-
-        /* Skip segments with no time coverage, these cannot be extended */
-        if (!SEGMENT_HAS_TIME_COVERAGE (searchseg))
+        searchseg = id->last;
+        while (searchseg)
         {
+          /* Skip segments with no time coverage, these cannot be extended */
+          if (!SEGMENT_HAS_TIME_COVERAGE (searchseg))
+          {
+            searchseg = searchseg->prev;
+            continue;
+          }
+
+          /* Done searching if autohealing and record exactly matches a segment.
+           *
+           * Rationale: autohealing would have combined this segment
+           * with another if that were possible, so this record will
+           * also not fit with any other segment. */
+          if (autoheal && msr->starttime == searchseg->starttime && endtime == searchseg->endtime)
+          {
+            followseg = searchseg;
+            break;
+          }
+
+          /* Done searching at the first (i.e. latest) segment starting before the record */
+          if (searchseg->starttime < msr->starttime)
+          {
+            followseg = searchseg;
+            break;
+          }
+
+          searchseg = searchseg->prev;
+        }
+      }
+      else
+      {
+        searchseg = id->first;
+        while (searchseg)
+        {
+          /* Done searching when segment starts beyond the record end plus tolerance */
+          if (searchseg->starttime > endtime + nsperiod + nstimetol)
+            break;
+
+          /* Skip segments with no time coverage, these cannot be extended */
+          if (!SEGMENT_HAS_TIME_COVERAGE (searchseg))
+          {
+            searchseg = searchseg->next;
+            continue;
+          }
+
+          /* Done searching if autohealing and record exactly matches a segment.
+           *
+           * Rationale: autohealing would have combined this segment
+           * with another if that were possible, so this record will
+           * also not fit with any other segment. */
+          if (autoheal && msr->starttime == searchseg->starttime && endtime == searchseg->endtime)
+          {
+            followseg = searchseg;
+            break;
+          }
+
+          if (msr->starttime > searchseg->starttime)
+            followseg = searchseg;
+
+          if (!segbefore)
+          {
+            postgap = msr->starttime - searchseg->endtime - nsperiod;
+
+            if (postgap <= nstimetol && postgap >= nnstimetol &&
+                IS_SAMPRATE_SIMILAR (sampratehz, searchseg->samprate, sampratetol))
+              segbefore = searchseg;
+          }
+
+          if (!segafter)
+          {
+            pregap = searchseg->starttime - endtime - nsperiod;
+
+            if (pregap <= nstimetol && pregap >= nnstimetol &&
+                IS_SAMPRATE_SIMILAR (sampratehz, searchseg->samprate, sampratetol))
+              segafter = searchseg;
+          }
+
+          /* Done searching if both before and after segments are found */
+          if (segbefore && segafter)
+            break;
+          /* Done searching if not autohealing and one match found */
+          else if (!autoheal && (segbefore || segafter))
+            break;
+
           searchseg = searchseg->next;
-          continue;
-        }
-
-        /* Done searching if autohealing and record exactly matches a segment.
-         *
-         * Rationale: autohealing would have combined this segment
-         * with another if that were possible, so this record will
-         * also not fit with any other segment. */
-        if (autoheal && msr->starttime == searchseg->starttime && endtime == searchseg->endtime)
-        {
-          followseg = searchseg;
-          break;
-        }
-
-        if (msr->starttime > searchseg->starttime)
-          followseg = searchseg;
-
-        if (!segbefore)
-        {
-          postgap = msr->starttime - searchseg->endtime - nsperiod;
-
-          if (postgap <= nstimetol && postgap >= nnstimetol &&
-              IS_SAMPRATE_SIMILAR (sampratehz, searchseg->samprate, sampratetol))
-            segbefore = searchseg;
-        }
-
-        if (!segafter)
-        {
-          pregap = searchseg->starttime - endtime - nsperiod;
-
-          if (pregap <= nstimetol && pregap >= nnstimetol &&
-              IS_SAMPRATE_SIMILAR (sampratehz, searchseg->samprate, sampratetol))
-            segafter = searchseg;
-        }
-
-        /* Done searching if both before and after segments are found */
-        if (segbefore && segafter)
-          break;
-        /* Done searching if not autohealing and one match found */
-        else if (!autoheal && (segbefore || segafter))
-          break;
-
-        searchseg = searchseg->next;
-      } /* Done looping through segments */
+        } /* Done looping through segments */
+      }
 
       /* Add MS3Record coverage to end of segment before */
       if (segbefore)

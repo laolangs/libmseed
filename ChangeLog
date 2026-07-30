@@ -3,6 +3,8 @@
     rates and use a multiplicative form of MS_ISRATETOLERABLE().
   - End the segment search early once a segment starts beyond the record
     end plus tolerance, as no later segment can match in the sorted list.
+  - Search backward from the last segment for zero sample rate records,
+    which can only match a following segment, avoiding a full list scan.
 
     2026.208: v3.5.2
   - Add MSF_RECORDLIST_NOEXTRAS to skip copying extra headers into
