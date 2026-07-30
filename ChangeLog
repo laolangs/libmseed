@@ -1,4 +1,4 @@
-2026.211:
+2026.211: v3.5.3
   - Optimize segment searches by tracking recently-active segments per trace ID,
     a significant improvement for creating trace lists from near time ordered
     input data.
