@@ -45,7 +45,7 @@ static nstime_t lm_packed_starttime (const MS3TraceSeg *seg, int64_t packedsampl
 /* Test if two sample rates are similar using either specified tolerance (if non-negative) or
  * default tolerance */
 #define IS_SAMPRATE_SIMILAR(SR1, SR2, SRT) \
-  ((SRT >= 0.0) ? fabs (SR1 - SR2) <= SRT : MS_ISRATETOLERABLE (SR1, SR2))
+  ((SR1) == (SR2) || ((SRT >= 0.0) ? fabs (SR1 - SR2) <= SRT : MS_ISRATETOLERABLE (SR1, SR2)))
 
 /* Test if a MS3TraceSeg represents time coverage */
 #define SEGMENT_HAS_TIME_COVERAGE(seg) ((seg)->samplecnt > 0 && (seg)->samprate != 0.0)

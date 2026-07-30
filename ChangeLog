@@ -1,4 +1,8 @@
-2026.208: v3.5.2
+2026.211:
+  - Avoid FP division in sample rate comparisons: short-circuit identical
+    rates and use a multiplicative form of MS_ISRATETOLERABLE().
+
+    2026.208: v3.5.2
   - Add MSF_RECORDLIST_NOEXTRAS to skip copying extra headers into
     MS3RecordList entries when building a record list.
   - Reject a blockette offset within the fixed header as fatal.
