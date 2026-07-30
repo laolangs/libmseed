@@ -515,6 +515,10 @@ _mstl3_addmsr_impl (MS3TraceList *mstl, const MS3Record *msr, MS3RecordPtr **ppr
       searchseg = id->first;
       while (searchseg)
       {
+        /* Done searching when segment starts beyond the record end plus tolerance */
+        if (searchseg->starttime > endtime + nsperiod + nstimetol)
+          break;
+
         /* Skip segments with no time coverage, these cannot be extended */
         if (!SEGMENT_HAS_TIME_COVERAGE (searchseg))
         {
