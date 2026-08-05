@@ -1,5 +1,6 @@
 2026.217:
   - Trace list packing optimization and improvement:
+    * Reuse the record packer and its buffers across trace-list segments
     * Skip speculative allocation when not enough samples for a record (v3)
     * Reduce system time calls
 

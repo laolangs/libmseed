@@ -162,9 +162,8 @@ msr3_pack (const MS3Record *msr, void (*record_handler) (char *, int, void *), v
  * Returns 0 on success and -1 if the geometry cannot be determined.
  ***************************************************************************/
 int
-lm_pack_geometry (const MS3Record *msr, int8_t formatversion, uint32_t maxreclen,
-                  uint8_t encoding, uint8_t samplesize, int *dataoffset,
-                  uint32_t *maxdatabytes, uint32_t *maxsamples)
+lm_pack_geometry (const MS3Record *msr, int8_t formatversion, uint32_t maxreclen, uint8_t encoding,
+                  uint8_t samplesize, int *dataoffset, uint32_t *maxdatabytes, uint32_t *maxsamples)
 {
   size_t sidlength;
   uint16_t extralength;
@@ -238,24 +237,6 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
 {
   MS3RecordPacker *packer = NULL;
 
-  if (!msr)
-  {
-    ms_log (2, "%s(): Required input not defined: 'msr'\n", __func__);
-    return NULL;
-  }
-
-  if ((msr->reclen != -1) && (msr->reclen < MINRECLEN || msr->reclen > MAXRECLEN))
-  {
-    ms_log (2, "%s: Record length is out of range: %d\n", msr->sid, msr->reclen);
-    return NULL;
-  }
-
-  if (msr->starttime == NSTUNSET || msr->starttime == NSTERROR)
-  {
-    ms_log (2, "%s: Record start time is unset\n", msr->sid);
-    return NULL;
-  }
-
   /* Allocate pack state context */
   packer = (MS3RecordPacker *)libmseed_memory.malloc (sizeof (MS3RecordPacker));
   if (!packer)
@@ -266,10 +247,62 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
 
   memset (packer, 0, sizeof (MS3RecordPacker));
 
-  /* Store parameters */
+  if (lm_pack_state_init (packer, msr, flags, verbose))
+  {
+    lm_pack_state_free (packer);
+    libmseed_memory.free (packer);
+    return NULL;
+  }
+
+  return packer;
+} /* End of msr3_pack_init() */
+
+/***************************************************************************
+ * Start (or restart) a packing session in a caller-allocated packer,
+ * reusing its rawrec/encoded buffers when they are already large enough.
+ *
+ * This is everything msr3_pack_init() does beyond allocating the
+ * ::MS3RecordPacker itself, factored out so a packer embedded in a
+ * longer-lived context (e.g. ::MS3TraceListPacker) can be re-initialized
+ * for each segment without a malloc/free cycle.
+ *
+ * Returns 0 on success and -1 on error.
+ ***************************************************************************/
+int
+lm_pack_state_init (MS3RecordPacker *packer, const MS3Record *msr, uint32_t flags, int8_t verbose)
+{
+  if (!packer || !msr)
+  {
+    ms_log (2, "%s(): Required input not defined: 'packer' or 'msr'\n", __func__);
+    return -1;
+  }
+
+  if ((msr->reclen != -1) && (msr->reclen < MINRECLEN || msr->reclen > MAXRECLEN))
+  {
+    ms_log (2, "%s: Record length is out of range: %d\n", msr->sid, msr->reclen);
+    return -1;
+  }
+
+  if (msr->starttime == NSTUNSET || msr->starttime == NSTERROR)
+  {
+    ms_log (2, "%s: Record start time is unset\n", msr->sid);
+    return -1;
+  }
+
+  /* Reset per-session state; rawrec/encoded and their allocated sizes are
+   * retained below for reuse */
   packer->msr = msr;
   packer->flags = flags;
   packer->verbose = verbose;
+  packer->packed_samples = 0;
+  packer->recordcount = 0;
+  packer->dataoffset = 0;
+  packer->maxsamples = 0;
+  packer->maxdatabytes = 0;
+  packer->samplesize = 0;
+  packer->blockette_1000_offset = 0;
+  packer->blockette_1001_offset = 0;
+  packer->finished = 0;
 
   /* Determine format version */
   packer->formatversion = (msr->formatversion == 2 || flags & MSF_PACKVER2) ? 2 : 3;
@@ -299,18 +332,23 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
               "%s: Record length (%u) is not large enough for header (%u), SID (%" PRIsize_t
               "), and extra (%d)\n",
               msr->sid, packer->maxreclen, MS3FSDH_LENGTH, strlen (msr->sid), msr->extralength);
-      libmseed_memory.free (packer);
-      return NULL;
+      return -1;
     }
   }
 
-  /* Allocate space for generated record */
-  packer->rawrec = (char *)libmseed_memory.malloc (packer->maxreclen);
-  if (!packer->rawrec)
+  /* Allocate space for generated record, reusing the existing buffer if
+   * already large enough */
+  if (packer->rawrec_size < packer->maxreclen)
   {
-    ms_log (2, "%s: Cannot allocate memory for record buffer\n", msr->sid);
-    libmseed_memory.free (packer);
-    return NULL;
+    char *rawrec = (char *)libmseed_memory.realloc (packer->rawrec, packer->maxreclen);
+    if (!rawrec)
+    {
+      ms_log (2, "%s: Cannot allocate memory for record buffer\n", msr->sid);
+      return -1;
+    }
+
+    packer->rawrec = rawrec;
+    packer->rawrec_size = packer->maxreclen;
   }
 
   memset (packer->rawrec, 0, packer->maxreclen);
@@ -322,9 +360,7 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
     if (!packer->samplesize)
     {
       ms_log (2, "%s: Unknown sample type '%c'\n", msr->sid, msr->sampletype);
-      libmseed_memory.free (packer->rawrec);
-      libmseed_memory.free (packer);
-      return NULL;
+      return -1;
     }
   }
 
@@ -353,9 +389,7 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
       {
         ms_log (2, "%s: Data offset (%d) does not fit within record length (%u)\n", msr->sid,
                 packer->dataoffset, packer->maxreclen);
-        libmseed_memory.free (packer->rawrec);
-        libmseed_memory.free (packer);
-        return NULL;
+        return -1;
       }
 
       /* Set data offset in header */
@@ -366,9 +400,7 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
   if (packer->dataoffset < 0)
   {
     ms_log (2, "%s: Cannot pack miniSEED header\n", msr->sid);
-    libmseed_memory.free (packer->rawrec);
-    libmseed_memory.free (packer);
-    return NULL;
+    return -1;
   }
 
   /* For records with samples, set up encoding buffers and parameters */
@@ -398,14 +430,19 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
       packer->maxsamples = UINT16_MAX;
     }
 
-    /* Allocate space for encoded data separately for alignment */
-    packer->encoded = (char *)libmseed_memory.malloc (packer->maxdatabytes);
-    if (!packer->encoded)
+    /* Allocate space for encoded data separately for alignment, reusing
+     * the existing buffer if already large enough */
+    if (packer->encoded_size < packer->maxdatabytes)
     {
-      ms_log (2, "%s: Cannot allocate memory for encoded data buffer\n", msr->sid);
-      libmseed_memory.free (packer->rawrec);
-      libmseed_memory.free (packer);
-      return NULL;
+      char *encoded = (char *)libmseed_memory.realloc (packer->encoded, packer->maxdatabytes);
+      if (!encoded)
+      {
+        ms_log (2, "%s: Cannot allocate memory for encoded data buffer\n", msr->sid);
+        return -1;
+      }
+
+      packer->encoded = encoded;
+      packer->encoded_size = packer->maxdatabytes;
     }
   }
 
@@ -415,8 +452,8 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
     ms_log (0, "%s: Initialized packing state for %s records\n", msr->sid,
             (packer->formatversion == 3) ? "miniSEED 3" : "miniSEED 2");
 
-  return packer;
-} /* End of msr3_pack_init() */
+  return 0;
+} /* End of lm_pack_state_init() */
 
 /** ************************************************************************
  * @brief Generate next miniSEED record.
@@ -673,18 +710,48 @@ msr3_pack_free (MS3RecordPacker **packer, int64_t *packedsamples)
   if (!packer || !*packer)
     return;
 
-  if (packedsamples)
-    *packedsamples = (*packer)->packed_samples;
-
-  if ((*packer)->rawrec)
-    libmseed_memory.free ((*packer)->rawrec);
-
-  if ((*packer)->encoded)
-    libmseed_memory.free ((*packer)->encoded);
+  lm_pack_state_finish (*packer, packedsamples);
+  lm_pack_state_free (*packer);
 
   libmseed_memory.free (*packer);
   *packer = NULL;
 } /* End of msr3_pack_free() */
+
+/***************************************************************************
+ * Report the total samples packed by a session and end it.  The packer's
+ * rawrec/encoded buffers are retained for reuse by a later
+ * lm_pack_state_init() call.
+ ***************************************************************************/
+void
+lm_pack_state_finish (MS3RecordPacker *packer, int64_t *packedsamples)
+{
+  if (!packer)
+    return;
+
+  if (packedsamples)
+    *packedsamples = packer->packed_samples;
+} /* End of lm_pack_state_finish() */
+
+/***************************************************************************
+ * Release a packer's rawrec/encoded buffers.
+ ***************************************************************************/
+void
+lm_pack_state_free (MS3RecordPacker *packer)
+{
+  if (!packer)
+    return;
+
+  if (packer->rawrec)
+    libmseed_memory.free (packer->rawrec);
+
+  if (packer->encoded)
+    libmseed_memory.free (packer->encoded);
+
+  packer->rawrec = NULL;
+  packer->rawrec_size = 0;
+  packer->encoded = NULL;
+  packer->encoded_size = 0;
+} /* End of lm_pack_state_free() */
 
 /** ************************************************************************
  * @brief Repack a parsed miniSEED record into a version 3 record.

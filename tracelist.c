@@ -2885,7 +2885,8 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
                 packer->current_id ? packer->current_id->sid : "");
 
         /* Retain the aborted session's count so the total does not under-report */
-        msr3_pack_free (&packer->seg_packing_state, &seg_total_packed);
+        lm_pack_state_finish (packer->seg_packing_state, &seg_total_packed);
+        packer->seg_packing_state = NULL;
         packer->totalpackedsamples += seg_total_packed;
 
         packer->current_id = NULL;
@@ -2924,8 +2925,10 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       /* Segment packing finished, clean up and update segment */
       int64_t seg_total_packed;
 
-      /* Free segment packing state and get packed sample count */
-      msr3_pack_free (&packer->seg_packing_state, &seg_total_packed);
+      /* End segment packing session and get packed sample count; the
+       * packer's buffers are retained in packer->seg_packer for reuse */
+      lm_pack_state_finish (packer->seg_packing_state, &seg_total_packed);
+      packer->seg_packing_state = NULL;
       packer->totalpackedsamples += seg_total_packed;
 
       if (packer->verbose > 1 && packer->current_id)
@@ -3186,15 +3189,16 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
         }
       }
 
-      /* Create segment packing state */
-      packer->seg_packing_state =
-          msr3_pack_init (&packer->msr_template, segment_flags, packer->verbose);
-
-      if (!packer->seg_packing_state)
+      /* Start segment packing session, reusing packer->seg_packer's
+       * buffers from a prior segment when already large enough */
+      if (lm_pack_state_init (&packer->seg_packer, &packer->msr_template, segment_flags,
+                              packer->verbose))
       {
         ms_log (2, "%s: Cannot initialize segment packing state\n", id->sid);
         return -1;
       }
+
+      packer->seg_packing_state = &packer->seg_packer;
 
       packer->segpackedsamples = 0;
 
@@ -3215,8 +3219,9 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       }
 
       /* result == 0: Segment couldn't produce a record (not enough data without flush).
-       * Free the packing state and continue scanning for another segment. */
-      msr3_pack_free (&packer->seg_packing_state, NULL);
+       * End the packing session, keeping its buffers, and continue scanning. */
+      lm_pack_state_finish (packer->seg_packing_state, NULL);
+      packer->seg_packing_state = NULL;
       packer->current_id = NULL;
       packer->current_seg = NULL;
     }
@@ -3256,9 +3261,13 @@ mstl3_pack_free (MS3TraceListPacker **packer, int64_t *packedsamples)
   {
     int64_t seg_samples = 0;
 
-    msr3_pack_free (&(*packer)->seg_packing_state, &seg_samples);
+    lm_pack_state_finish ((*packer)->seg_packing_state, &seg_samples);
+    (*packer)->seg_packing_state = NULL;
     (*packer)->totalpackedsamples += seg_samples;
   }
+
+  /* Release the segment packer's buffers, retained across segments for reuse */
+  lm_pack_state_free (&(*packer)->seg_packer);
 
   if (packedsamples)
     *packedsamples = (*packer)->totalpackedsamples;

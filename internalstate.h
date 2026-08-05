@@ -35,7 +35,9 @@ struct MS3RecordPacker
   int8_t verbose;              /* Logging level */
 
   char *rawrec;                /* Allocated record buffer */
+  uint32_t rawrec_size;        /* Allocated size of rawrec, may exceed maxreclen */
   char *encoded;               /* Encoded data buffer */
+  uint32_t encoded_size;       /* Allocated size of encoded, may exceed maxdatabytes */
   uint32_t maxreclen;          /* Max record length */
   int64_t packed_samples;      /* Total samples packed so far */
   uint32_t recordcount;        /* Records generated so far */
@@ -67,7 +69,8 @@ struct MS3TraceListPacker
   MS3TraceSeg *current_seg;    /* Current segment */
   MS3TraceID *last_id;         /* Trace ID of last completed segment (MSF_MAINTAINMSTL) */
   MS3TraceSeg *last_seg;       /* Last completed segment (MSF_MAINTAINMSTL) */
-  MS3RecordPacker *seg_packing_state; /* Current segment packing state */
+  MS3RecordPacker *seg_packing_state; /* Current segment packing state, NULL when idle */
+  MS3RecordPacker seg_packer;  /* Storage for seg_packing_state, reused across segments */
   MS3Record msr_template;      /* Template MS3Record for current segment */
   int64_t segpackedsamples;    /* Samples packed from current segment */
   int64_t totalpackedsamples;  /* Total samples packed */
@@ -81,6 +84,19 @@ struct MS3TraceListPacker
 extern int lm_pack_geometry (const MS3Record *msr, int8_t formatversion, uint32_t maxreclen,
                              uint8_t encoding, uint8_t samplesize, int *dataoffset,
                              uint32_t *maxdatabytes, uint32_t *maxsamples);
+
+/* Start (or restart) a packing session in a caller-allocated ::MS3RecordPacker,
+ * reusing its rawrec/encoded buffers when already large enough; returns 0 on
+ * success and -1 on error */
+extern int lm_pack_state_init (MS3RecordPacker *packer, const MS3Record *msr, uint32_t flags,
+                               int8_t verbose);
+
+/* Report the total samples packed by a session and end it, retaining the
+ * packer's buffers for reuse by a later lm_pack_state_init() */
+extern void lm_pack_state_finish (MS3RecordPacker *packer, int64_t *packedsamples);
+
+/* Release a packer's rawrec/encoded buffers */
+extern void lm_pack_state_free (MS3RecordPacker *packer);
 
 /* Number of most-recently-active segments tracked per MS3TraceID, used to
  * bound the segment-list search in _mstl3_addmsr_impl() */
