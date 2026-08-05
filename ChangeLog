@@ -1,3 +1,7 @@
+2026.217:
+  - Trace list packing optimization and improvement:
+    * Reduce system time calls
+
 2026.211: v3.5.3
   - Optimize segment searches by tracking recently-active segments per trace ID,
     a significant improvement for creating trace lists from near time ordered

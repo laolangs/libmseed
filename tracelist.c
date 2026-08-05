@@ -2443,6 +2443,7 @@ _mstl3_pack_callback (MS3TraceList *mstl, void (*record_handler) (char *, int, v
   int64_t segpackedsamples = 0;
   uint32_t segment_flags = 0;
   nstime_t flush_idle_nanoseconds = (nstime_t)flush_idle_seconds * NSTMODULUS;
+  nstime_t now = (flush_idle_nanoseconds > 0) ? lmp_systemtime () : 0;
 
   if (!mstl)
   {
@@ -2480,7 +2481,7 @@ _mstl3_pack_callback (MS3TraceList *mstl, void (*record_handler) (char *, int, v
       if (flush_idle_nanoseconds > 0 && seg->prvtptr)
       {
         nstime_t *update_time = (nstime_t *)seg->prvtptr;
-        nstime_t update_latency = lmp_systemtime () - *update_time;
+        nstime_t update_latency = now - *update_time;
 
         if (update_latency > flush_idle_nanoseconds)
         {
@@ -2787,6 +2788,7 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
   MS3TraceID *id = NULL;
   MS3TraceSeg *seg = NULL;
   MS3TraceSeg *resume_seg = NULL;
+  nstime_t now = NSTUNSET;
 
   if (!packer || !record || !reclen)
   {
@@ -3024,7 +3026,11 @@ mstl3_pack_next (MS3TraceListPacker *packer, uint32_t flags, char **record, int3
       if (packer->flush_idle_nanoseconds > 0 && seg->prvtptr)
       {
         nstime_t *update_time = (nstime_t *)seg->prvtptr;
-        nstime_t update_latency = lmp_systemtime () - *update_time;
+
+        if (now == NSTUNSET)
+          now = lmp_systemtime ();
+
+        nstime_t update_latency = now - *update_time;
 
         if (update_latency > packer->flush_idle_nanoseconds)
         {
