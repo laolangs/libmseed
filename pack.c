@@ -150,6 +150,63 @@ msr3_pack (const MS3Record *msr, void (*record_handler) (char *, int, void *), v
   return (result == 0) ? recordcount : -1;
 } /* End of msr3_pack() */
 
+/***************************************************************************
+ * Derive record geometry (data offset, max data bytes, max samples) for a
+ * packing template without allocating or writing anything.
+ *
+ * Only miniSEED 3 geometry is pure arithmetic; miniSEED 2 depends on the
+ * blockette layout assembled by msr3_pack_header2_offsets(), so this
+ * always returns -1 for miniSEED 2 and callers must fall back to a full
+ * msr3_pack_init().
+ *
+ * Returns 0 on success and -1 if the geometry cannot be determined.
+ ***************************************************************************/
+int
+lm_pack_geometry (const MS3Record *msr, int8_t formatversion, uint32_t maxreclen,
+                  uint8_t encoding, uint8_t samplesize, int *dataoffset,
+                  uint32_t *maxdatabytes, uint32_t *maxsamples)
+{
+  size_t sidlength;
+  uint16_t extralength;
+  uint32_t offset;
+
+  if (!msr || !dataoffset || !maxdatabytes || !maxsamples || formatversion != 3)
+    return -1;
+
+  sidlength = strlen (msr->sid);
+  extralength = (msr->extra) ? msr->extralength : 0;
+  offset = MS3FSDH_LENGTH + (uint32_t)sidlength + extralength;
+
+  if (maxreclen < offset)
+    return -1;
+
+  *dataoffset = (int)offset;
+  *maxdatabytes = maxreclen - offset;
+
+  if (msr->numsamples <= 0)
+  {
+    *maxsamples = 0;
+  }
+  else if (encoding == DE_STEIM1)
+  {
+    *maxsamples = (*maxdatabytes / 64) * STEIM1_FRAME_MAX_SAMPLES;
+  }
+  else if (encoding == DE_STEIM2)
+  {
+    *maxsamples = (*maxdatabytes / 64) * STEIM2_FRAME_MAX_SAMPLES;
+  }
+  else if (samplesize)
+  {
+    *maxsamples = *maxdatabytes / samplesize;
+  }
+  else
+  {
+    return -1;
+  }
+
+  return 0;
+} /* End of lm_pack_geometry() */
+
 /** ************************************************************************
  * @brief Initialize a packer for generator-style record creation
  *

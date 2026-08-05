@@ -74,6 +74,14 @@ struct MS3TraceListPacker
   int64_t totalpackedrecords;  /* Total records packed */
 };
 
+/* Derive record geometry for a packing template without allocating or
+ * writing anything; returns 0 on success, -1 if it cannot be determined
+ * (always the case for miniSEED 2, whose data offset depends on the
+ * blockette layout built by msr3_pack_header2_offsets()) */
+extern int lm_pack_geometry (const MS3Record *msr, int8_t formatversion, uint32_t maxreclen,
+                             uint8_t encoding, uint8_t samplesize, int *dataoffset,
+                             uint32_t *maxdatabytes, uint32_t *maxsamples);
+
 /* Number of most-recently-active segments tracked per MS3TraceID, used to
  * bound the segment-list search in _mstl3_addmsr_impl() */
 #define LM_RECENTSEGS 4
