@@ -75,6 +75,10 @@ struct MS3TraceListPacker
   int64_t segpackedsamples;    /* Samples packed from current segment */
   int64_t totalpackedsamples;  /* Total samples packed */
   int64_t totalpackedrecords;  /* Total records packed */
+
+  char resume_sid[LM_SIDLEN];  /* SID of last completed segment, scan resumes at or after it */
+  uint8_t resume_pubversion;   /* Publication version of resume_sid, used as a tie-breaker */
+  int8_t resume_valid;         /* Set once resume_sid/resume_pubversion hold a usable hint */
 };
 
 /* Derive record geometry for a packing template without allocating or
