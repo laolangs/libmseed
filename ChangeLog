@@ -1,9 +1,10 @@
 2026.217:
   - Trace list packing optimization and improvement:
-    * Reuse the record packer and its buffers across trace-list segments
-    * Skip speculative allocation when not enough samples for a record (v3)
-    * Resume the trace-list pack scan where it left off
-    * Reduce system time calls
+    * Reuse the record packer and its buffers across trace-list segments.
+    * Skip speculative allocation when not enough samples for a record (v3).
+    * Resume the trace-list pack scan where it left off.
+    * Reduce system time calls.
+  - Resolve year and month in ms_gmtime64_r() with closed-form arithmetic.
 
 2026.211: v3.5.3
   - Optimize segment searches by tracking recently-active segments per trace ID,

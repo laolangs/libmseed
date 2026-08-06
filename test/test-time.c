@@ -36,6 +36,15 @@ TEST (time, nstime2timestr)
   ms_nstime2timestr_n (nstime, timestr, sizeof(timestr), NANOSECONDEPOCH, NANO_MICRO_NONE);
   CHECK_STREQ (timestr, "1084345689123456788");
 
+  /* Extremes of the time scale */
+  nstime = -2145916799999999998LL;
+  ms_nstime2timestr_n (nstime, timestr, sizeof (timestr), ISOMONTHDAY_Z, NANO_MICRO_NONE);
+  CHECK_STREQ (timestr, "1902-01-01T00:00:00.000000002Z");
+
+  nstime = INT64_MAX; // aka 9223372036854775807LL
+  ms_nstime2timestr_n (nstime, timestr, sizeof (timestr), ISOMONTHDAY_Z, NANO_MICRO_NONE);
+  CHECK_STREQ (timestr, "2262-04-11T23:47:16.854775807Z");
+
   /* Subsecond variations */
 
   /* Nano subseconds */
@@ -126,6 +135,13 @@ TEST (time, timestr2nstime)
 
   nstime = ms_timestr2nstime ("-14182939.012345679");
   CHECK (nstime == -14182939012345679, "Failed to convert time string: '-14182939.012345679'");
+
+  /* Extremes of the time scale */
+  nstime = ms_timestr2nstime ("1902-01-01T00:00:00.000000002Z");
+  CHECK (nstime == -2145916799999999998, "Failed to convert time string: '1902-01-01T00:00:00.000000002Z'");
+
+  nstime = ms_timestr2nstime ("2262-04-11T23:47:16.854775807Z");
+  CHECK (nstime == INT64_MAX, "Failed to convert time string: '2262-04-11T23:47:16.854775807Z'");
 
   /* Near-boundary value that remains in range */
   nstime = ms_timestr2nstime ("+9223372036.5");
