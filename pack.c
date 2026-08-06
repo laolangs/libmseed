@@ -151,60 +151,56 @@ msr3_pack (const MS3Record *msr, void (*record_handler) (char *, int, void *), v
 } /* End of msr3_pack() */
 
 /***************************************************************************
- * Derive record geometry (data offset, max data bytes, max samples) for a
- * packing template without allocating or writing anything.
+ * Maximum samples that fit in maxdatabytes for a given encoding, the same
+ * formula used by lm_pack_state_init() to set packer->maxsamples.
+ ***************************************************************************/
+static uint32_t
+lm_pack_maxsamples (uint32_t maxdatabytes, uint8_t encoding, uint8_t samplesize)
+{
+  if (encoding == DE_STEIM1)
+    return (maxdatabytes / 64) * STEIM1_FRAME_MAX_SAMPLES;
+  else if (encoding == DE_STEIM2)
+    return (maxdatabytes / 64) * STEIM2_FRAME_MAX_SAMPLES;
+  else
+    return (samplesize) ? maxdatabytes / samplesize : 0;
+} /* End of lm_pack_maxsamples() */
+
+/***************************************************************************
+ * Test whether a record with the given geometry cannot hold numsamples,
+ * i.e. whether msr3_pack_next() would return 0 on a fresh packer with this
+ * geometry and without ::MSF_FLUSHDATA set. No allocation, no writing.
  *
  * Only miniSEED 3 geometry is pure arithmetic; miniSEED 2 depends on the
  * blockette layout assembled by msr3_pack_header2_offsets(), so this
- * always returns -1 for miniSEED 2 and callers must fall back to a full
- * msr3_pack_init().
+ * always returns 0 (not determined) for miniSEED 2 and callers must fall
+ * back to a full msr3_pack_init() to find out.
  *
- * Returns 0 on success and -1 if the geometry cannot be determined.
+ * Returns non-zero if the record is short of a full record, and 0 if it
+ * may already be able to fill one or the geometry cannot be determined.
  ***************************************************************************/
 int
-lm_pack_geometry (const MS3Record *msr, int8_t formatversion, uint32_t maxreclen, uint8_t encoding,
-                  uint8_t samplesize, int *dataoffset, uint32_t *maxdatabytes, uint32_t *maxsamples)
+lm_pack_short_of_record (int8_t formatversion, uint32_t maxreclen, size_t sidlength,
+                         uint16_t extralength, uint8_t encoding, uint8_t samplesize,
+                         int64_t numsamples)
 {
-  size_t sidlength;
-  uint16_t extralength;
   uint32_t offset;
+  uint32_t maxdatabytes;
+  uint32_t maxsamples;
 
-  if (!msr || !dataoffset || !maxdatabytes || !maxsamples || formatversion != 3)
-    return -1;
+  if (formatversion != 3 || !samplesize || numsamples <= 0 || maxreclen < MINRECLEN ||
+      maxreclen > MAXRECLEN)
+    return 0;
 
-  sidlength = strlen (msr->sid);
-  extralength = (msr->extra) ? msr->extralength : 0;
   offset = MS3FSDH_LENGTH + (uint32_t)sidlength + extralength;
 
   if (maxreclen < offset)
-    return -1;
+    return 0;
 
-  *dataoffset = (int)offset;
-  *maxdatabytes = maxreclen - offset;
+  maxdatabytes = maxreclen - offset;
+  maxsamples = lm_pack_maxsamples (maxdatabytes, encoding, samplesize);
 
-  if (msr->numsamples <= 0)
-  {
-    *maxsamples = 0;
-  }
-  else if (encoding == DE_STEIM1)
-  {
-    *maxsamples = (*maxdatabytes / 64) * STEIM1_FRAME_MAX_SAMPLES;
-  }
-  else if (encoding == DE_STEIM2)
-  {
-    *maxsamples = (*maxdatabytes / 64) * STEIM2_FRAME_MAX_SAMPLES;
-  }
-  else if (samplesize)
-  {
-    *maxsamples = *maxdatabytes / samplesize;
-  }
-  else
-  {
-    return -1;
-  }
-
-  return 0;
-} /* End of lm_pack_geometry() */
+  return (uint64_t)numsamples < maxsamples;
+} /* End of lm_pack_short_of_record() */
 
 /** ************************************************************************
  * @brief Initialize a packer for generator-style record creation
@@ -419,19 +415,8 @@ lm_pack_state_init (MS3RecordPacker *packer, const MS3Record *msr, uint32_t flag
   {
     /* Determine the max data bytes and sample count */
     packer->maxdatabytes = packer->maxreclen - packer->dataoffset;
-
-    if (packer->encoding == DE_STEIM1)
-    {
-      packer->maxsamples = (uint32_t)(packer->maxdatabytes / 64) * STEIM1_FRAME_MAX_SAMPLES;
-    }
-    else if (packer->encoding == DE_STEIM2)
-    {
-      packer->maxsamples = (uint32_t)(packer->maxdatabytes / 64) * STEIM2_FRAME_MAX_SAMPLES;
-    }
-    else
-    {
-      packer->maxsamples = packer->maxdatabytes / packer->samplesize;
-    }
+    packer->maxsamples =
+        lm_pack_maxsamples (packer->maxdatabytes, packer->encoding, packer->samplesize);
 
     /* The miniSEED 2 FSDH sample count is a 16-bit field, so a single
      * record cannot represent more than UINT16_MAX samples regardless of

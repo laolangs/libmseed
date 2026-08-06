@@ -81,13 +81,13 @@ struct MS3TraceListPacker
   int8_t resume_valid;         /* Set once resume_sid/resume_pubversion hold a usable hint */
 };
 
-/* Derive record geometry for a packing template without allocating or
- * writing anything; returns 0 on success, -1 if it cannot be determined
- * (always the case for miniSEED 2, whose data offset depends on the
- * blockette layout built by msr3_pack_header2_offsets()) */
-extern int lm_pack_geometry (const MS3Record *msr, int8_t formatversion, uint32_t maxreclen,
-                             uint8_t encoding, uint8_t samplesize, int *dataoffset,
-                             uint32_t *maxdatabytes, uint32_t *maxsamples);
+/* Test whether a record with the given geometry cannot hold numsamples,
+ * without allocating or writing anything; always returns 0 (not
+ * determined) for miniSEED 2, whose data offset depends on the blockette
+ * layout built by msr3_pack_header2_offsets() */
+extern int lm_pack_short_of_record (int8_t formatversion, uint32_t maxreclen, size_t sidlength,
+                                    uint16_t extralength, uint8_t encoding, uint8_t samplesize,
+                                    int64_t numsamples);
 
 /* Start (or restart) a packing session in a caller-allocated ::MS3RecordPacker,
  * reusing its rawrec/encoded buffers when already large enough; returns 0 on

@@ -2518,26 +2518,13 @@ static int
 lm_segment_short_of_record (const char *sid, const MS3TraceSeg *seg, int reclen, int8_t encoding,
                             const char *extra, size_t extralength, uint32_t flags)
 {
-  MS3Record msr = MS3Record_INITIALIZER;
-  int dataoffset;
-  uint32_t maxdatabytes;
-  uint32_t maxsamples;
   uint32_t maxreclen = (reclen < 0) ? MS_PACK_DEFAULT_RECLEN : (uint32_t)reclen;
   int8_t formatversion = (flags & MSF_PACKVER2) ? 2 : 3;
   uint8_t samplesize = ms_samplesize (seg->sampletype);
 
-  if (!samplesize)
-    return 0;
-
-  memcpy (msr.sid, sid, sizeof (msr.sid));
-  msr.extra = (char *)extra;
-  msr.extralength = (uint16_t)extralength;
-  msr.numsamples = seg->numsamples;
-
-  return (lm_pack_geometry (&msr, formatversion, maxreclen,
-                            lm_segment_encoding (seg->sampletype, encoding), samplesize,
-                            &dataoffset, &maxdatabytes, &maxsamples) == 0 &&
-          (uint64_t)seg->numsamples < maxsamples);
+  return lm_pack_short_of_record (
+      formatversion, maxreclen, strlen (sid), (extra) ? (uint16_t)extralength : 0,
+      lm_segment_encoding (seg->sampletype, encoding), samplesize, seg->numsamples);
 } /* End of lm_segment_short_of_record() */
 
 /***************************************************************************
@@ -2950,8 +2937,8 @@ lm_pack_scan_range (MS3TraceListPacker *packer, uint32_t flags, size_t extraleng
        * without paying for a full packing session; this is the same
        * condition msr3_pack_next() uses to return 0 on a fresh packer. */
       if (!(segment_flags & MSF_FLUSHDATA) &&
-          lm_segment_short_of_record (id->sid, seg, packer->reclen, packer->encoding,
-                                      packer->extra, extralength, segment_flags))
+          lm_segment_short_of_record (id->sid, seg, packer->reclen, packer->encoding, packer->extra,
+                                      extralength, segment_flags))
       {
         packer->current_id = NULL;
         packer->current_seg = NULL;
@@ -2992,6 +2979,8 @@ lm_pack_scan_range (MS3TraceListPacker *packer, uint32_t flags, size_t extraleng
                               packer->verbose))
       {
         ms_log (2, "%s: Cannot initialize segment packing state\n", id->sid);
+        packer->current_id = NULL;
+        packer->current_seg = NULL;
         return -1;
       }
 
