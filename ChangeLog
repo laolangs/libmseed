@@ -1,7 +1,7 @@
-2026.217:
+2026.217: v3.5.4
   - Trace list packing optimization and improvement:
     * Reuse the record packer and its buffers across trace-list segments.
-    * Skip speculative allocation when not enough samples for a record (v3).
+    * Skip speculative allocation when not enough samples for a v3 record.
     * Resume the trace-list pack scan where it left off.
     * Reduce system time calls.
   - Resolve year and month in ms_gmtime64_r() with closed-form arithmetic.
