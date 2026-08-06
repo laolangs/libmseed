@@ -576,7 +576,48 @@ TEST (read, selection)
   CHECK (msr->numsamples == 112, "Selection read, unexpected number of decoded samples");
   CHECK (msr->starttime == nstime, "Selection read, unexpected record start time");
 
+  /* Drain the remainder of the stream; the matching channel is the only
+   * one selected but other channels' records are skipped along the way,
+   * so end of stream should still be reported as MS_ENDOFFILE */
+  while ((rv = ms3_readmsr_selection (&msfp, &msr, "data/testdata-3channel-signal.mseed3",
+                                      flags, selections, 0)) == MS_NOERROR)
+    ;
+  CHECK (rv == MS_ENDOFFILE, "ms3_readmsr_selection() did not return expected MS_ENDOFFILE at end of stream");
+
   ms3_readmsr_selection(&msfp, &msr, NULL, flags, NULL, 0);
+  ms3_freeselections (selections);
+}
+
+TEST (read, selection_nomatch)
+{
+  MS3Record *msr = NULL;
+  MS3FileParam *msfp = NULL;
+  MS3TraceList *mstl = NULL;
+  MS3Selections *selections = NULL;
+  uint32_t flags = MSF_UNPACKDATA;
+  int rv;
+
+  /* A selection matching nothing in the file; the records are parsed and
+   * skipped, which is not the same as the input not being SEED at all */
+  rv = ms3_addselect (&selections, "FDSN:XX_NOSUCH_*_B_H_Z", NSTUNSET, NSTUNSET, 0);
+  REQUIRE (rv == 0, "ms3_addselect() returned an unexpected error");
+
+  while ((rv = ms3_readmsr_selection (&msfp, &msr, "data/testdata-3channel-signal.mseed3",
+                                      flags, selections, 0)) == MS_NOERROR)
+    ;
+  CHECK (rv == MS_ENDOFFILE,
+         "ms3_readmsr_selection() did not return expected MS_ENDOFFILE when selections match nothing");
+
+  ms3_readmsr_selection (&msfp, &msr, NULL, flags, NULL, 0);
+
+  rv = ms3_readtracelist_selection (&mstl, "data/testdata-3channel-signal.mseed3", NULL,
+                                    selections, 0, flags, 0);
+  CHECK (rv == MS_NOERROR,
+         "ms3_readtracelist_selection() did not return expected MS_NOERROR when selections match nothing");
+  REQUIRE (mstl != NULL, "ms3_readtracelist_selection() did not populate 'mstl'");
+  CHECK (mstl->numtraceids == 0, "Trace list unexpectedly populated by a non-matching selection");
+
+  mstl3_free (&mstl, 0);
   ms3_freeselections (selections);
 }
 

@@ -5,6 +5,8 @@
     * Resume the trace-list pack scan where it left off.
     * Reduce system time calls.
   - Resolve year and month in ms_gmtime64_r() with closed-form arithmetic.
+  - Return MS_ENDOFFILE instead of MS_NOTSEED when selections skip every record
+    in a stream.
 
 2026.211: v3.5.3
   - Optimize segment searches by tracking recently-active segments per trace ID,
