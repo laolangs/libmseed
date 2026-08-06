@@ -237,6 +237,12 @@ msr3_pack_init (const MS3Record *msr, uint32_t flags, int8_t verbose)
 {
   MS3RecordPacker *packer = NULL;
 
+  if (!msr)
+  {
+    ms_log (2, "%s(): Required input not defined: 'msr'\n", __func__);
+    return NULL;
+  }
+
   /* Allocate pack state context */
   packer = (MS3RecordPacker *)libmseed_memory.malloc (sizeof (MS3RecordPacker));
   if (!packer)
@@ -289,20 +295,25 @@ lm_pack_state_init (MS3RecordPacker *packer, const MS3Record *msr, uint32_t flag
     return -1;
   }
 
-  /* Reset per-session state; rawrec/encoded and their allocated sizes are
-   * retained below for reuse */
+  /* Reset per-session state, retaining rawrec/encoded and their allocated
+   * sizes for reuse regardless of what else this struct grows to hold */
+  {
+    char *rawrec = packer->rawrec;
+    uint32_t rawrec_size = packer->rawrec_size;
+    char *encoded = packer->encoded;
+    uint32_t encoded_size = packer->encoded_size;
+
+    memset (packer, 0, sizeof (*packer));
+
+    packer->rawrec = rawrec;
+    packer->rawrec_size = rawrec_size;
+    packer->encoded = encoded;
+    packer->encoded_size = encoded_size;
+  }
+
   packer->msr = msr;
   packer->flags = flags;
   packer->verbose = verbose;
-  packer->packed_samples = 0;
-  packer->recordcount = 0;
-  packer->dataoffset = 0;
-  packer->maxsamples = 0;
-  packer->maxdatabytes = 0;
-  packer->samplesize = 0;
-  packer->blockette_1000_offset = 0;
-  packer->blockette_1001_offset = 0;
-  packer->finished = 0;
 
   /* Determine format version */
   packer->formatversion = (msr->formatversion == 2 || flags & MSF_PACKVER2) ? 2 : 3;
@@ -730,6 +741,9 @@ lm_pack_state_finish (MS3RecordPacker *packer, int64_t *packedsamples)
 
   if (packedsamples)
     *packedsamples = packer->packed_samples;
+
+  packer->finished = 1;
+  packer->msr = NULL;
 } /* End of lm_pack_state_finish() */
 
 /***************************************************************************
